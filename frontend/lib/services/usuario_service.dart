@@ -1,0 +1,76 @@
+import 'package:provider/provider.dart';
+
+import '../main.dart';
+import '../models/usuario.dart';
+import 'api_service.dart';
+
+class UsuarioService {
+  Future<List<Usuario>> getAll() async {
+    try {
+      final apiService = Provider.of<ApiService>(
+        navigatorKey.currentContext!,
+        listen: false,
+      );
+      final response = await apiService.get('/usuarios');
+      return (response.data as List)
+          .map((json) => Usuario.fromJson(json))
+          .toList();
+    } catch (e) {
+      print('Error al obtener usuarios: $e');
+      rethrow;
+    }
+  }
+
+  Future<Usuario> getById(int id) async {
+    try {
+      final apiService = Provider.of<ApiService>(
+        navigatorKey.currentContext!,
+        listen: false,
+      );
+      final response = await apiService.get('/usuarios/$id');
+      return Usuario.fromJson(response.data);
+    } catch (e) {
+      print('Error al obtener usuario: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateRol(int id, String rol) async {
+    try {
+      final apiService = Provider.of<ApiService>(
+        navigatorKey.currentContext!,
+        listen: false,
+      );
+      await apiService.put('/usuarios/$id/rol', data: {'rol': rol});
+    } catch (e) {
+      print('Error al actualizar rol: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateEstado(int id, bool activo) async {
+    try {
+      final apiService = Provider.of<ApiService>(
+        navigatorKey.currentContext!,
+        listen: false,
+      );
+      await apiService.put('/usuarios/$id/estado', data: {'activo': activo});
+    } catch (e) {
+      print('Error al actualizar estado: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateUsuario(int id, UpdateUsuarioDTO dto) async {
+    try {
+      final apiService = Provider.of<ApiService>(
+        navigatorKey.currentContext!,
+        listen: false,
+      );
+      await apiService.put('/usuarios/$id', data: dto.toJson());
+    } catch (e) {
+      print('Error al actualizar usuario: $e');
+      rethrow;
+    }
+  }
+}

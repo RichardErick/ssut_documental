@@ -39,13 +39,15 @@ class Usuario {
       areaId: json['areaId'],
       areaNombre: json['areaNombre'],
       activo: json['activo'] ?? true,
-      ultimoAcceso: json['ultimoAcceso'] != null
-          ? DateTime.parse(json['ultimoAcceso'])
-          : null,
+      ultimoAcceso:
+          json['ultimoAcceso'] != null
+              ? DateTime.parse(json['ultimoAcceso'])
+              : null,
       intentosFallidos: json['intentosFallidos'] ?? 0,
-      bloqueadoHasta: json['bloqueadoHasta'] != null
-          ? DateTime.parse(json['bloqueadoHasta'])
-          : null,
+      bloqueadoHasta:
+          json['bloqueadoHasta'] != null
+              ? DateTime.parse(json['bloqueadoHasta'])
+              : null,
       fechaRegistro: DateTime.parse(json['fechaRegistro']),
       fechaActualizacion: DateTime.parse(json['fechaActualizacion']),
     );

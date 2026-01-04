@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
-import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/api_service.dart';
+import 'services/audit_service.dart';
 import 'services/documento_service.dart';
 import 'services/movimiento_service.dart';
 import 'services/reporte_service.dart';
-import 'services/audit_service.dart';
 import 'services/sync_service.dart';
+import 'services/usuario_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +49,7 @@ class MyApp extends StatelessWidget {
         Provider(create: (_) => DocumentoService()),
         Provider(create: (_) => MovimientoService()),
         Provider(create: (_) => ReporteService()),
+        Provider(create: (_) => UsuarioService()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../models/user_role.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/sidebar.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/sidebar.dart';
+import 'admin/roles_permissions_screen.dart';
+import 'admin/users_sync_screen.dart';
 import 'documentos/documentos_list_screen.dart';
 import 'movimientos/movimientos_screen.dart';
 import 'qr/qr_scanner_screen.dart';
 import 'reportes/reportes_screen.dart';
-import 'admin/users_sync_screen.dart';
-import '../models/user_role.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _buildNavItems() {
     final role = Provider.of<AuthProvider>(context).role;
-    
+
     _navItems = [
       NavigationItem(
         label: 'Documentos',
@@ -53,30 +54,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     ];
 
-    if (role == UserRole.administradorSistema || role == UserRole.administradorDocumentos) {
-      _navItems.add(NavigationItem(
-        label: 'Reportes',
-        icon: Icons.assessment_outlined,
-        selectedIcon: Icons.assessment,
-        screen: const ReportesScreen(),
-      ));
-    }
-    
-    if (role == UserRole.administradorSistema) {
-      _navItems.add(NavigationItem(
-        label: 'Sincronización',
-        icon: Icons.sync_problem_outlined, // Using similar icon as placeholder
-        selectedIcon: Icons.sync,
-        screen: const UsersSyncScreen(),
-      ));
+    if (role == UserRole.administradorSistema ||
+        role == UserRole.administradorDocumentos) {
+      _navItems.add(
+        NavigationItem(
+          label: 'Reportes',
+          icon: Icons.assessment_outlined,
+          selectedIcon: Icons.assessment,
+          screen: const ReportesScreen(),
+        ),
+      );
     }
 
-    _navItems.add(NavigationItem(
-      label: 'Escáner QR',
-      icon: Icons.qr_code_scanner_outlined,
-      selectedIcon: Icons.qr_code_scanner,
-      screen: const QRScannerScreen(),
-    ));
+    if (role == UserRole.administradorSistema) {
+      _navItems.add(
+        NavigationItem(
+          label: 'Roles y Permisos',
+          icon: Icons.admin_panel_settings_outlined,
+          selectedIcon: Icons.admin_panel_settings,
+          screen: const RolesPermissionsScreen(),
+        ),
+      );
+      _navItems.add(
+        NavigationItem(
+          label: 'Sincronización',
+          icon:
+              Icons.sync_problem_outlined, // Using similar icon as placeholder
+          selectedIcon: Icons.sync,
+          screen: const UsersSyncScreen(),
+        ),
+      );
+    }
+
+    _navItems.add(
+      NavigationItem(
+        label: 'Escáner QR',
+        icon: Icons.qr_code_scanner_outlined,
+        selectedIcon: Icons.qr_code_scanner,
+        screen: const QRScannerScreen(),
+      ),
+    );
   }
 
   @override
@@ -132,8 +149,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               extendBodyBehindAppBar: true,
               appBar: _buildAppBar(theme, isDesktop),
               body: _buildBody(theme),
-              floatingActionButton: _selectedIndex == 0 ? _buildFAB(theme) : null,
-              bottomNavigationBar: !isDesktop && !isTablet ? _buildBottomNav(theme) : null,
+              floatingActionButton:
+                  _selectedIndex == 0 ? _buildFAB(theme) : null,
+              bottomNavigationBar:
+                  !isDesktop && !isTablet ? _buildBottomNav(theme) : null,
             ),
           ),
         ],
@@ -154,24 +173,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             backgroundColor: Colors.transparent,
             elevation: 0,
             leadingWidth: isDesktop ? 0 : 56,
-            leading: isDesktop
-                ? null
-                : IconButton(
-                    icon: const Icon(Icons.menu),
-                    onPressed: () {
-                      setState(() => _isSidebarCollapsed = !_isSidebarCollapsed);
-                    },
-                  ),
-            title: isDesktop 
-                ? _buildBreadcrumbs(theme)
-                : Text(
-                    _navItems[_selectedIndex].label,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
+            leading:
+                isDesktop
+                    ? null
+                    : IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () {
+                        setState(
+                          () => _isSidebarCollapsed = !_isSidebarCollapsed,
+                        );
+                      },
+                    ),
+            title:
+                isDesktop
+                    ? _buildBreadcrumbs(theme)
+                    : Text(
+                      _navItems[_selectedIndex].label,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
             actions: [
               _buildActionIcon(Icons.search, 'Búsqueda Global', theme),
               const SizedBox(width: 12),
-              _buildActionIcon(Icons.notifications_none_rounded, 'Notificaciones', theme),
+              _buildActionIcon(
+                Icons.notifications_none_rounded,
+                'Notificaciones',
+                theme,
+              ),
               const SizedBox(width: 12),
               _buildThemeToggle(theme),
               const SizedBox(width: 12),
@@ -210,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-// _getTitle() removed as it is replaced by _navItems logic
+  // _getTitle() removed as it is replaced by _navItems logic
 
   Widget _buildActionIcon(IconData icon, String tooltip, ThemeData theme) {
     return Container(
@@ -220,7 +250,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
       ),
       child: IconButton(
-        icon: Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.7), size: 22),
+        icon: Icon(
+          icon,
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
+          size: 22,
+        ),
         onPressed: () {},
         tooltip: tooltip,
       ),
@@ -237,7 +271,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       child: IconButton(
         icon: Icon(
-          themeProvider.esModoOscuro ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          themeProvider.esModoOscuro
+              ? Icons.light_mode_rounded
+              : Icons.dark_mode_rounded,
           color: Colors.amber,
           size: 22,
         ),
@@ -265,7 +301,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Icon(Icons.person, size: 20, color: Colors.white),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: theme.colorScheme.primary),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: theme.colorScheme.primary,
+            ),
           ],
         ),
       ),
@@ -275,17 +315,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Navigator.of(context).pushReplacementNamed('/login');
         }
       },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'profile',
-          child: Row(children: [Icon(Icons.person_outline, color: theme.colorScheme.primary), const SizedBox(width: 12), const Text('Mi Perfil')]),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: 'logout',
-          child: Row(children: const [Icon(Icons.logout, color: Colors.red), SizedBox(width: 12), Text('Cerrar Sesión', style: TextStyle(color: Colors.red))]),
-        ),
-      ],
+      itemBuilder:
+          (context) => [
+            PopupMenuItem(
+              value: 'profile',
+              child: Row(
+                children: [
+                  Icon(Icons.person_outline, color: theme.colorScheme.primary),
+                  const SizedBox(width: 12),
+                  const Text('Mi Perfil'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: const [
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
     );
   }
 
@@ -322,7 +375,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: Text(
           'NUEVO DOCUMENTO',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
     );
@@ -335,14 +392,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: theme.colorScheme.surface,
       elevation: 10,
       indicatorColor: theme.colorScheme.primary.withOpacity(0.1),
-      destinations: _navItems.map((item) {
-        return NavigationDestination(
-          icon: Icon(item.icon),
-          selectedIcon: Icon(item.selectedIcon),
-          label: item.label,
-        );
-      }).toList(),
+      destinations:
+          _navItems.map((item) {
+            return NavigationDestination(
+              icon: Icon(item.icon),
+              selectedIcon: Icon(item.selectedIcon),
+              label: item.label,
+            );
+          }).toList(),
     );
   }
 }
-
