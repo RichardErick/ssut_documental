@@ -1,0 +1,4370 @@
+{
+  "_id": "AAAAAAAAAAE=",
+  "_type": "Project",
+  "name": "SistemaGestionDocumental",
+  "ownedElements": [
+    {
+      "_id": "AAAAAAAAAAM=",
+      "_type": "UMLModel",
+      "name": "UMLModel",
+      "ownedElements": [
+        {
+          "_id": "AAAAAAAAAAQ=",
+          "_type": "UMLPackage",
+          "name": "Database",
+          "ownedElements": [
+            {
+              "_id": "AAAAAAAAAAU=",
+              "_type": "UMLEnumeration",
+              "name": "rol_enum",
+              "ownedLiterals": [
+                {
+                  "_id": "AAAAAAAAAAY=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Administrador"
+                },
+                {
+                  "_id": "AAAAAAAAAAc=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "AdministradorDocumentos"
+                },
+                {
+                  "_id": "AAAAAAAAAAg=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Usuario"
+                },
+                {
+                  "_id": "AAAAAAAAAAk=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Supervisor"
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAAo=",
+              "_type": "UMLEnumeration",
+              "name": "estado_documento_enum",
+              "ownedLiterals": [
+                {
+                  "_id": "AAAAAAAAAAs=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Activo"
+                },
+                {
+                  "_id": "AAAAAAAAAAw=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Inactivo"
+                },
+                {
+                  "_id": "AAAAAAAAAA0=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Archivado"
+                },
+                {
+                  "_id": "AAAAAAAAAA4=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Eliminado"
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAA8=",
+              "_type": "UMLEnumeration",
+              "name": "tipo_movimiento_enum",
+              "ownedLiterals": [
+                {
+                  "_id": "AAAAAAAAABA=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Prestamo"
+                },
+                {
+                  "_id": "AAAAAAAAABE=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Devolucion"
+                },
+                {
+                  "_id": "AAAAAAAAABI=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Transferencia"
+                },
+                {
+                  "_id": "AAAAAAAAABM=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Archivo"
+                },
+                {
+                  "_id": "AAAAAAAAABQ=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Eliminacion"
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAABU=",
+              "_type": "UMLEnumeration",
+              "name": "estado_movimiento_enum",
+              "ownedLiterals": [
+                {
+                  "_id": "AAAAAAAAABY=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Activo"
+                },
+                {
+                  "_id": "AAAAAAAAABc=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Completado"
+                },
+                {
+                  "_id": "AAAAAAAAABg=",
+                  "_type": "UMLEnumerationLiteral",
+                  "name": "Cancelado"
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAABk=",
+              "_type": "UMLClass",
+              "name": "Usuario",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAABo=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAABs=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAABw=",
+                  "_type": "UMLAttribute",
+                  "name": "nombre_usuario",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAB0=",
+                  "_type": "UMLAttribute",
+                  "name": "nombre_completo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAB4=",
+                  "_type": "UMLAttribute",
+                  "name": "email",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAB8=",
+                  "_type": "UMLAttribute",
+                  "name": "password_hash",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACA=",
+                  "_type": "UMLAttribute",
+                  "name": "rol",
+                  "type": "rol_enum",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACE=",
+                  "_type": "UMLAttribute",
+                  "name": "area_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACI=",
+                  "_type": "UMLAttribute",
+                  "name": "activo",
+                  "type": "Boolean",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACM=",
+                  "_type": "UMLAttribute",
+                  "name": "ultimo_acceso",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACQ=",
+                  "_type": "UMLAttribute",
+                  "name": "intentos_fallidos",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACU=",
+                  "_type": "UMLAttribute",
+                  "name": "bloqueado_hasta",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACY=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_registro",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACc=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_actualizacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAACg=",
+              "_type": "UMLClass",
+              "name": "Area",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAACk=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACo=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACs=",
+                  "_type": "UMLAttribute",
+                  "name": "nombre",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAACw=",
+                  "_type": "UMLAttribute",
+                  "name": "codigo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAC0=",
+                  "_type": "UMLAttribute",
+                  "name": "descripcion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAC4=",
+                  "_type": "UMLAttribute",
+                  "name": "activo",
+                  "type": "Boolean",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAC8=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_creacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADA=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_actualizacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADE=",
+                  "_type": "UMLAttribute",
+                  "name": "creado_por",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAADI=",
+              "_type": "UMLClass",
+              "name": "TipoDocumento",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAADM=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADQ=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADU=",
+                  "_type": "UMLAttribute",
+                  "name": "nombre",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADY=",
+                  "_type": "UMLAttribute",
+                  "name": "codigo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADc=",
+                  "_type": "UMLAttribute",
+                  "name": "descripcion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADg=",
+                  "_type": "UMLAttribute",
+                  "name": "activo",
+                  "type": "Boolean",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADk=",
+                  "_type": "UMLAttribute",
+                  "name": "requiere_aprobacion",
+                  "type": "Boolean",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADo=",
+                  "_type": "UMLAttribute",
+                  "name": "plazo_retencion_dias",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADs=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_creacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAADw=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_actualizacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAD0=",
+                  "_type": "UMLAttribute",
+                  "name": "creado_por",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAD4=",
+              "_type": "UMLClass",
+              "name": "Documento",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAAD8=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEA=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEE=",
+                  "_type": "UMLAttribute",
+                  "name": "codigo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEI=",
+                  "_type": "UMLAttribute",
+                  "name": "numero_correlativo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEM=",
+                  "_type": "UMLAttribute",
+                  "name": "tipo_documento_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEQ=",
+                  "_type": "UMLAttribute",
+                  "name": "area_origen_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEU=",
+                  "_type": "UMLAttribute",
+                  "name": "area_actual_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEY=",
+                  "_type": "UMLAttribute",
+                  "name": "gestion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEc=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_documento",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEg=",
+                  "_type": "UMLAttribute",
+                  "name": "descripcion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEk=",
+                  "_type": "UMLAttribute",
+                  "name": "responsable_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEo=",
+                  "_type": "UMLAttribute",
+                  "name": "codigo_qr",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEs=",
+                  "_type": "UMLAttribute",
+                  "name": "ubicacion_fisica",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAEw=",
+                  "_type": "UMLAttribute",
+                  "name": "estado",
+                  "type": "estado_documento_enum",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAE0=",
+                  "_type": "UMLAttribute",
+                  "name": "nivel_confidencialidad",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAE4=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_vencimiento",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAE8=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_registro",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFA=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_actualizacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAFE=",
+              "_type": "UMLClass",
+              "name": "Movimiento",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAAFI=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFM=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFQ=",
+                  "_type": "UMLAttribute",
+                  "name": "documento_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFU=",
+                  "_type": "UMLAttribute",
+                  "name": "tipo_movimiento",
+                  "type": "tipo_movimiento_enum",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFY=",
+                  "_type": "UMLAttribute",
+                  "name": "area_origen_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFc=",
+                  "_type": "UMLAttribute",
+                  "name": "area_destino_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFg=",
+                  "_type": "UMLAttribute",
+                  "name": "usuario_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFk=",
+                  "_type": "UMLAttribute",
+                  "name": "usuario_autoriza_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFo=",
+                  "_type": "UMLAttribute",
+                  "name": "observaciones",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFs=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_movimiento",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAFw=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_devolucion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAF0=",
+                  "_type": "UMLAttribute",
+                  "name": "estado",
+                  "type": "estado_movimiento_enum",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAF4=",
+                  "_type": "UMLAttribute",
+                  "name": "plazo_dias",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAF8=",
+              "_type": "UMLClass",
+              "name": "Anexo",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAAGA=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGE=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGI=",
+                  "_type": "UMLAttribute",
+                  "name": "documento_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGM=",
+                  "_type": "UMLAttribute",
+                  "name": "nombre_archivo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGQ=",
+                  "_type": "UMLAttribute",
+                  "name": "extension",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGU=",
+                  "_type": "UMLAttribute",
+                  "name": "tamano_bytes",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGY=",
+                  "_type": "UMLAttribute",
+                  "name": "url_archivo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGc=",
+                  "_type": "UMLAttribute",
+                  "name": "tipo_contenido",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGg=",
+                  "_type": "UMLAttribute",
+                  "name": "hash_archivo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGk=",
+                  "_type": "UMLAttribute",
+                  "name": "version",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGo=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_registro",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAGs=",
+                  "_type": "UMLAttribute",
+                  "name": "activo",
+                  "type": "Boolean",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAGw=",
+              "_type": "UMLClass",
+              "name": "HistorialDocumento",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAAG0=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAG4=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAG8=",
+                  "_type": "UMLAttribute",
+                  "name": "documento_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHA=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_cambio",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHE=",
+                  "_type": "UMLAttribute",
+                  "name": "usuario_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHI=",
+                  "_type": "UMLAttribute",
+                  "name": "tipo_cambio",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHM=",
+                  "_type": "UMLAttribute",
+                  "name": "estado_anterior",
+                  "type": "estado_documento_enum",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHQ=",
+                  "_type": "UMLAttribute",
+                  "name": "estado_nuevo",
+                  "type": "estado_documento_enum",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHU=",
+                  "_type": "UMLAttribute",
+                  "name": "area_anterior_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHY=",
+                  "_type": "UMLAttribute",
+                  "name": "area_nueva_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHc=",
+                  "_type": "UMLAttribute",
+                  "name": "campo_modificado",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHg=",
+                  "_type": "UMLAttribute",
+                  "name": "valor_anterior",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHk=",
+                  "_type": "UMLAttribute",
+                  "name": "valor_nuevo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAHo=",
+                  "_type": "UMLAttribute",
+                  "name": "observacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAHs=",
+              "_type": "UMLClass",
+              "name": "Auditoria",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAAHw=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAH0=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAH4=",
+                  "_type": "UMLAttribute",
+                  "name": "usuario_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAH8=",
+                  "_type": "UMLAttribute",
+                  "name": "sesion_id",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIA=",
+                  "_type": "UMLAttribute",
+                  "name": "accion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIE=",
+                  "_type": "UMLAttribute",
+                  "name": "tabla_afectada",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAII=",
+                  "_type": "UMLAttribute",
+                  "name": "registro_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIM=",
+                  "_type": "UMLAttribute",
+                  "name": "registro_uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIQ=",
+                  "_type": "UMLAttribute",
+                  "name": "detalle",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIU=",
+                  "_type": "UMLAttribute",
+                  "name": "ip_address",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIY=",
+                  "_type": "UMLAttribute",
+                  "name": "user_agent",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIc=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_accion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAIg=",
+              "_type": "UMLClass",
+              "name": "Alerta",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAAIk=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIo=",
+                  "_type": "UMLAttribute",
+                  "name": "uuid",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIs=",
+                  "_type": "UMLAttribute",
+                  "name": "usuario_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAIw=",
+                  "_type": "UMLAttribute",
+                  "name": "titulo",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAI0=",
+                  "_type": "UMLAttribute",
+                  "name": "mensaje",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAI4=",
+                  "_type": "UMLAttribute",
+                  "name": "tipo_alerta",
+                  "type": "String",
+                  "visibility": "private",
+";,
+                 . "is  .
+                  "_ .
+                 . "is.
+               .
+.
+.
+.
+.
+.
+.
+.
+.
+;.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+"visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAI8=",
+                  "_type": "UMLAttribute",
+                  "name": "leida",
+                  "type": "Boolean",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJA=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_creacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJE=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_lectura",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJI=",
+                  "_type": "UMLAttribute",
+                  "name": "documento_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJM=",
+                  "_type": "UMLAttribute",
+                  "name": "movimiento_id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            },
+            {
+              "_id": "AAAAAAAAAJQ=",
+              "_type": "UMLClass",
+              "name": "Configuracion",
+              "attributes": [
+                {
+                  "_id": "AAAAAAAAAJU=",
+                  "_type": "UMLAttribute",
+                  "name": "id",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJY=",
+                  "_type": "UMLAttribute",
+                  "name": "clave",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJc=",
+                  "_type": "UMLAttribute",
+                  "name": "valor",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJg=",
+                  "_type": "UMLAttribute",
+                  "name": "descripcion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJk=",
+                  "_type": "UMLAttribute",
+                  "name": "tipo_dato",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJo=",
+                  "_type": "UMLAttribute",
+                  "name": "editable",
+                  "type": "Boolean",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJs=",
+                  "_type": "UMLAttribute",
+                  "name": "fecha_actualizacion",
+                  "type": "String",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                },
+                {
+                  "_id": "AAAAAAAAAJw=",
+                  "_type": "UMLAttribute",
+                  "name": "actualizado_por",
+                  "type": "Integer",
+                  "visibility": "private",
+                  "isStatic": false,
+                  "isReadOnly": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

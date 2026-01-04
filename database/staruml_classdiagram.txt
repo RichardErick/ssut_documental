@@ -1,0 +1,215 @@
+classDiagram
+    class Usuario {
+        +int id
+        +String uuid
+        +String nombre_usuario
+        +String nombre_completo
+        +String email
+        +String password_hash
+        +String rol
+        +int area_id
+        +boolean activo
+        +String ultimo_acceso
+        +int intentos_fallidos
+        +String bloqueado_hasta
+        +String fecha_registro
+        +String fecha_actualizacion
+    }
+    
+    class Area {
+        +int id
+        +String uuid
+        +String nombre
+        +String codigo
+        +String descripcion
+        +boolean activo
+        +String fecha_creacion
+        +String fecha_actualizacion
+        +int creado_por
+    }
+    
+    class TipoDocumento {
+        +int id
+        +String uuid
+        +String nombre
+        +String codigo
+        +String descripcion
+        +boolean activo
+        +boolean requiere_aprobacion
+        +int plazo_retencion_dias
+        +String fecha_creacion
+        +String fecha_actualizacion
+        +int creado_por
+    }
+    
+    class Documento {
+        +int id
+        +String uuid
+        +String codigo
+        +String numero_correlativo
+        +int tipo_documento_id
+        +int area_origen_id
+        +int area_actual_id
+        +String gestion
+        +String fecha_documento
+        +String descripcion
+        +int responsable_id
+        +String codigo_qr
+        +String ubicacion_fisica
+        +String estado
+        +int nivel_confidencialidad
+        +String fecha_vencimiento
+        +String fecha_registro
+        +String fecha_actualizacion
+    }
+    
+    class Movimiento {
+        +int id
+        +String uuid
+        +int documento_id
+        +String tipo_movimiento
+        +int area_origen_id
+        +int area_destino_id
+        +int usuario_id
+        +int usuario_autoriza_id
+        +String observaciones
+        +String fecha_movimiento
+        +String fecha_devolucion
+        +String estado
+        +int plazo_dias
+    }
+    
+    class Anexo {
+        +int id
+        +String uuid
+        +int documento_id
+        +String nombre_archivo
+        +String extension
+        +int tamano_bytes
+        +String url_archivo
+        +String tipo_contenido
+        +String hash_archivo
+        +int version
+        +String fecha_registro
+        +boolean activo
+    }
+    
+    class HistorialDocumento {
+        +int id
+        +String uuid
+        +int documento_id
+        +String fecha_cambio
+        +int usuario_id
+        +String tipo_cambio
+        +String estado_anterior
+        +String estado_nuevo
+        +int area_anterior_id
+        +int area_nueva_id
+        +String campo_modificado
+        +String valor_anterior
+        +String valor_nuevo
+        +String observacion
+    }
+    
+    class Auditoria {
+        +int id
+        +String uuid
+        +int usuario_id
+        +String sesion_id
+        +String accion
+        +String tabla_afectada
+        +int registro_id
+        +String registro_uuid
+        +String detalle
+        +String ip_address
+        +String user_agent
+        +String fecha_accion
+    }
+    
+    class Alerta {
+        +int id
+        +String uuid
+        +int usuario_id
+        +String titulo
+        +String mensaje
+        +String tipo_alerta
+        +boolean leida
+        +String fecha_creacion
+        +String fecha_lectura
+        +int documento_id
+        +int movimiento_id
+    }
+    
+    class Configuracion {
+        +int id
+        +String clave
+        +String valor
+        +String descripcion
+        +String tipo_dato
+        +boolean editable
+        +String fecha_actualizacion
+        +int actualizado_por
+    }
+    
+    class rol_enum {
+        <<enumeration>>
+        Administrador
+        AdministradorDocumentos
+        Usuario
+        Supervisor
+    }
+    
+    class estado_documento_enum {
+        <<enumeration>>
+        Activo
+        Inactivo
+        Archivado
+        Eliminado
+    }
+    
+    class tipo_movimiento_enum {
+        <<enumeration>>
+        Prestamo
+        Devolucion
+        Transferencia
+        Archivo
+        Eliminacion
+    }
+    
+    class estado_movimiento_enum {
+        <<enumeration>>
+        Activo
+        Completado
+        Cancelado
+    }
+    
+    Usuario "1" -- "*" Documento : responsable
+    Usuario "1" -- "*" Movimiento : usuario
+    Usuario "1" -- "*" Alerta : usuario
+    Usuario "*" -- "1" Area : pertenece
+    Usuario -- rol_enum
+    
+    Area "1" -- "*" Documento : origen
+    Area "1" -- "*" Documento : actual
+    Area "1" -- "*" Movimiento : origen
+    Area "1" -- "*" Movimiento : destino
+    
+    TipoDocumento "1" -- "*" Documento : tipo
+    
+    Documento "1" -- "*" Movimiento : movimientos
+    Documento "1" -- "*" Anexo : anexos
+    Documento "1" -- "*" HistorialDocumento : historial
+    Documento "1" -- "*" Alerta : alertas
+    Documento -- estado_documento_enum
+    
+    Movimiento "1" -- "*" Alerta : alertas
+    Movimiento -- tipo_movimiento_enum
+    Movimiento -- estado_movimiento_enum
+    
+    HistorialDocumento "1" -- "1" Area : anterior
+    HistorialDocumento "1" -- "1" Area : nueva
+    HistorialDocumento -- estado_documento_enum
+    
+    Auditoria "1" -- "1" Usuario : usuario
+    
+    Configuracion "1" -- "1" Usuario : actualizado_por

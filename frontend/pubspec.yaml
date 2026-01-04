@@ -1,0 +1,55 @@
+name: frontend
+description: Sistema de Información Web para la Gestión, Control y Trazabilidad Documental del SSUT
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # UI
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.1.0
+  
+  # HTTP y API
+  http: ^1.1.0
+  dio: ^5.4.0
+  
+  # Estado y gestión de datos
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+  
+  # QR Code
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^3.5.0
+  
+  # Formularios y validación
+  flutter_form_builder: ^10.2.0
+  form_builder_validators: ^11.1.2
+  
+  # Fechas
+  intl: ^0.20.2
+  
+  # PDF y reportes
+  pdf: ^3.10.7
+  printing: ^5.12.0
+  
+  # Utilidades
+  path_provider: ^2.1.1
+  image_picker: ^1.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/

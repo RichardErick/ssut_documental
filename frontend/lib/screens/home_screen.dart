@@ -1,0 +1,348 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/sidebar.dart';
+import '../widgets/glass_container.dart';
+import 'documentos/documentos_list_screen.dart';
+import 'movimientos/movimientos_screen.dart';
+import 'qr/qr_scanner_screen.dart';
+import 'reportes/reportes_screen.dart';
+import 'admin/users_sync_screen.dart';
+import '../models/user_role.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  int _selectedIndex = 0;
+  bool _isSidebarCollapsed = false;
+  late AnimationController _fabController;
+  late Animation<double> _fabAnimation;
+
+  List<NavigationItem> _navItems = [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _buildNavItems();
+  }
+
+  void _buildNavItems() {
+    final role = Provider.of<AuthProvider>(context).role;
+    
+    _navItems = [
+      NavigationItem(
+        label: 'Documentos',
+        icon: Icons.description_outlined,
+        selectedIcon: Icons.description,
+        screen: const DocumentosListScreen(),
+      ),
+      NavigationItem(
+        label: 'Movimientos',
+        icon: Icons.swap_horiz_outlined,
+        selectedIcon: Icons.swap_horiz,
+        screen: const MovimientosScreen(),
+      ),
+    ];
+
+    if (role == UserRole.administradorSistema || role == UserRole.administradorDocumentos) {
+      _navItems.add(NavigationItem(
+        label: 'Reportes',
+        icon: Icons.assessment_outlined,
+        selectedIcon: Icons.assessment,
+        screen: const ReportesScreen(),
+      ));
+    }
+    
+    if (role == UserRole.administradorSistema) {
+      _navItems.add(NavigationItem(
+        label: 'Sincronización',
+        icon: Icons.sync_problem_outlined, // Using similar icon as placeholder
+        selectedIcon: Icons.sync,
+        screen: const UsersSyncScreen(),
+      ));
+    }
+
+    _navItems.add(NavigationItem(
+      label: 'Escáner QR',
+      icon: Icons.qr_code_scanner_outlined,
+      selectedIcon: Icons.qr_code_scanner,
+      screen: const QRScannerScreen(),
+    ));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fabController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fabAnimation = CurvedAnimation(
+      parent: _fabController,
+      curve: Curves.elasticOut,
+    );
+    _fabController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fabController.dispose();
+    super.dispose();
+  }
+
+  void _onItemSelected(int index) {
+    setState(() {
+      _selectedIndex = index;
+      if (index == 0) {
+        _fabController.forward();
+      } else {
+        _fabController.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width >= 1100;
+    final isTablet = size.width >= 700 && size.width < 1100;
+
+    return Scaffold(
+      body: Row(
+        children: [
+          if (isDesktop || isTablet)
+            SideBar(
+              selectedIndex: _selectedIndex,
+              onItemSelected: _onItemSelected,
+              isCollapsed: isTablet || _isSidebarCollapsed,
+              navItems: _navItems,
+            ),
+          Expanded(
+            child: Scaffold(
+              extendBodyBehindAppBar: true,
+              appBar: _buildAppBar(theme, isDesktop),
+              body: _buildBody(theme),
+              floatingActionButton: _selectedIndex == 0 ? _buildFAB(theme) : null,
+              bottomNavigationBar: !isDesktop && !isTablet ? _buildBottomNav(theme) : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(ThemeData theme, bool isDesktop) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(80),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+        child: GlassContainer(
+          blur: 10,
+          opacity: theme.brightness == Brightness.dark ? 0.05 : 0.7,
+          borderRadius: 20,
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leadingWidth: isDesktop ? 0 : 56,
+            leading: isDesktop
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () {
+                      setState(() => _isSidebarCollapsed = !_isSidebarCollapsed);
+                    },
+                  ),
+            title: isDesktop 
+                ? _buildBreadcrumbs(theme)
+                : Text(
+                    _navItems[_selectedIndex].label,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+            actions: [
+              _buildActionIcon(Icons.search, 'Búsqueda Global', theme),
+              const SizedBox(width: 12),
+              _buildActionIcon(Icons.notifications_none_rounded, 'Notificaciones', theme),
+              const SizedBox(width: 12),
+              _buildThemeToggle(theme),
+              const SizedBox(width: 12),
+              _buildUserAvatar(theme),
+              const SizedBox(width: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBreadcrumbs(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'SSUT / ${_navItems[_selectedIndex].label.toUpperCase()}',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.primary,
+            letterSpacing: 1.1,
+          ),
+        ),
+        Text(
+          _navItems[_selectedIndex].label,
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+
+// _getTitle() removed as it is replaced by _navItems logic
+
+  Widget _buildActionIcon(IconData icon, String tooltip, ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: theme.colorScheme.onSurface.withOpacity(0.7), size: 22),
+        onPressed: () {},
+        tooltip: tooltip,
+      ),
+    );
+  }
+
+  Widget _buildThemeToggle(ThemeData theme) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: IconButton(
+        icon: Icon(
+          themeProvider.esModoOscuro ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          color: Colors.amber,
+          size: 22,
+        ),
+        onPressed: () => themeProvider.cambiarTema(),
+        tooltip: 'Cambiar Tema',
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar(ThemeData theme) {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 16,
+              backgroundColor: AppTheme.colorPrimario,
+              child: Icon(Icons.person, size: 20, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: theme.colorScheme.primary),
+          ],
+        ),
+      ),
+      onSelected: (value) {
+        if (value == 'logout') {
+          Provider.of<AuthProvider>(context, listen: false).logout();
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'profile',
+          child: Row(children: [Icon(Icons.person_outline, color: theme.colorScheme.primary), const SizedBox(width: 12), const Text('Mi Perfil')]),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'logout',
+          child: Row(children: const [Icon(Icons.logout, color: Colors.red), SizedBox(width: 12), Text('Cerrar Sesión', style: TextStyle(color: Colors.red))]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      padding: const EdgeInsets.only(top: 100),
+      color: theme.colorScheme.background,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: _navItems[_selectedIndex].screen,
+      ),
+    );
+  }
+
+  Widget _buildFAB(ThemeData theme) {
+    return ScaleTransition(
+      scale: _fabAnimation,
+      child: FloatingActionButton.extended(
+        onPressed: () {},
+        backgroundColor: AppTheme.colorPrimario,
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: Text(
+          'NUEVO DOCUMENTO',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav(ThemeData theme) {
+    return NavigationBar(
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: _onItemSelected,
+      backgroundColor: theme.colorScheme.surface,
+      elevation: 10,
+      indicatorColor: theme.colorScheme.primary.withOpacity(0.1),
+      destinations: _navItems.map((item) {
+        return NavigationDestination(
+          icon: Icon(item.icon),
+          selectedIcon: Icon(item.selectedIcon),
+          label: item.label,
+        );
+      }).toList(),
+    );
+  }
+}
+

@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XMI xmi.version="2.1" xmlns:UML="http://schema.omg.org/spec/UML/2.1">
+  <XMI.header>
+    <XMI.documentation>
+      <XMI.exporter>StarUML</XMI.exporter>
+      <XMI.exporterVersion>5.0</XMI.exporterVersion>
+    </XMI.documentation>
+  </XMI.header>
+  <XMI.content>
+    <UML:Model xmi.id="Model_1" name="SistemaGestionDocumental">
+      <UML:Package xmi.id="Package_1" name="Database">
+        
+        <!-- Enumeraciones -->
+        <UML:Enumeration xmi.id="Enum_rol_enum" name="rol_enum">
+          <UML:ownedLiteral xmi.id="EnumLiteral_1" name="Administrador"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_2" name="AdministradorDocumentos"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_3" name="Usuario"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_4" name="Supervisor"/>
+        </UML:Enumeration>
+        
+        <UML:Enumeration xmi.id="Enum_estado_documento_enum" name="estado_documento_enum">
+          <UML:ownedLiteral xmi.id="EnumLiteral_5" name="Activo"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_6" name="Inactivo"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_7" name="Archivado"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_8" name="Eliminado"/>
+        </UML:Enumeration>
+        
+        <UML:Enumeration xmi.id="Enum_tipo_movimiento_enum" name="tipo_movimiento_enum">
+          <UML:ownedLiteral xmi.id="EnumLiteral_9" name="Prestamo"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_10" name="Devolucion"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_11" name="Transferencia"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_12" name="Archivo"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_13" name="Eliminacion"/>
+        </UML:Enumeration>
+        
+        <UML:Enumeration xmi.id="Enum_estado_movimiento_enum" name="estado_movimiento_enum">
+          <UML:ownedLiteral xmi.id="EnumLiteral_14" name="Activo"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_15" name="Completado"/>
+          <UML:ownedLiteral xmi.id="EnumLiteral_16" name="Cancelado"/>
+        </UML:Enumeration>
+        
+        <!-- Tabla Usuario -->
+        <UML:Class xmi.id="Class_Usuario" name="Usuario">
+          <UML:ownedAttribute xmi.id="Attr_Usuario_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_nombre_usuario" name="nombre_usuario" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_nombre_completo" name="nombre_completo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_email" name="email" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_password_hash" name="password_hash" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_rol" name="rol" visibility="private" type="Enum_rol_enum"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_area_id" name="area_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_activo" name="activo" visibility="private" type="UML:Boolean"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_ultimo_acceso" name="ultimo_acceso" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_intentos_fallidos" name="intentos_fallidos" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_bloqueado_hasta" name="bloqueado_hasta" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_fecha_registro" name="fecha_registro" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Usuario_fecha_actualizacion" name="fecha_actualizacion" visibility="private" type="UML:String"/>
+        </UML:Class>
+        
+        <!-- Tabla Area -->
+        <UML:Class xmi.id="Class_Area" name="Area">
+          <UML:ownedAttribute xmi.id="Attr_Area_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_nombre" name="nombre" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_codigo" name="codigo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_descripcion" name="descripcion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_activo" name="activo" visibility="private" type="UML:Boolean"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_fecha_creacion" name="fecha_creacion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_fecha_actualizacion" name="fecha_actualizacion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Area_creado_por" name="creado_por" visibility="private" type="UML:Integer"/>
+        </UML:Class>
+        
+        <!-- Tabla TipoDocumento -->
+        <UML:Class xmi.id="Class_TipoDocumento" name="TipoDocumento">
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_nombre" name="nombre" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_codigo" name="codigo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_descripcion" name="descripcion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_activo" name="activo" visibility="private" type="UML:Boolean"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_requiere_aprobacion" name="requiere_aprobacion" visibility="private" type="UML:Boolean"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_plazo_retencion_dias" name="plazo_retencion_dias" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_fecha_creacion" name="fecha_creacion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_fecha_actualizacion" name="fecha_actualizacion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_TipoDocumento_creado_por" name="creado_por" visibility="private" type="UML:Integer"/>
+        </UML:Class>
+        
+        <!-- Tabla Documento -->
+        <UML:Class xmi.id="Class_Documento" name="Documento">
+          <UML:ownedAttribute xmi.id="Attr_Documento_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_codigo" name="codigo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_numero_correlativo" name="numero_correlativo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_tipo_documento_id" name="tipo_documento_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_area_origen_id" name="area_origen_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_area_actual_id" name="area_actual_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_gestion" name="gestion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_fecha_documento" name="fecha_documento" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_descripcion" name="descripcion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_responsable_id" name="responsable_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_codigo_qr" name="codigo_qr" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_ubicacion_fisica" name="ubicacion_fisica" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_estado" name="estado" visibility="private" type="Enum_estado_documento_enum"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_nivel_confidencialidad" name="nivel_confidencialidad" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_fecha_vencimiento" name="fecha_vencimiento" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_fecha_registro" name="fecha_registro" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Documento_fecha_actualizacion" name="fecha_actualizacion" visibility="private" type="UML:String"/>
+        </UML:Class>
+        
+        <!-- Tabla Movimiento -->
+        <UML:Class xmi.id="Class_Movimiento" name="Movimiento">
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_documento_id" name="documento_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_tipo_movimiento" name="tipo_movimiento" visibility="private" type="Enum_tipo_movimiento_enum"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_area_origen_id" name="area_origen_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_area_destino_id" name="area_destino_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Mov;ovimiento_usuario_id" name="usuario_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_usuario_autoriza_id" name="usuario_autoriza_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_observaciones" name="observaciones" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_fecha_movimiento" name="fecha_movimiento" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_fecha_devolucion" name="fecha_devolucion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_estado" name="estado" visibility="private" type="Enum_estado_movimiento_enum"/>
+          <UML:ownedAttribute xmi.id="Attr_Movimiento_plazo_dias" name="plazo_dias" visibility="private" type="UML:Integer"/>
+        </UML:Class>
+        
+        <!-- Tabla Anexo -->
+        <UML:Class xmi.id="Class_Anexo" name="Anexo">
+          <UML:ownedAttribute xmi.id="Attr_Anexo_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_documento_id" name="documento_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_nombre_archivo" name="nombre_archivo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_extension" name="extension" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_tamano_bytes" name="tamano_bytes" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_url_archivo" name="url_archivo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_tipo_contenido" name="tipo_contenido" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_hash_archivo" name="hash_archivo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_version" name="version" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi.id="Attr_Anexo_fecha_registro" name="fecha_registro" visibility="private" type="UML:String"/>
+          <UML:.
+ownedAttribute.
+UML.
+Attribute xmi:id="Attr_Anexo_activo" name="activo" visibility="private" type="UML:Boolean"/>
+        </UML:Class>
+        
+        <!-- Tabla HistorialDocumento -->
+        <UML:Class xmi.id="Class_HistorialDocumento" name="HistorialDocumento">
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_documento_id" name="documento_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_fecha_cambio" name="fecha_cambio" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_usuario_id" name="usuario_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_tipo_cambio" name="tipo_cambio" visibility="  ="private"  type=" .="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_estado_an
+_anterior"自已 name=" F="estado_an assorted
+ Control" x文化传播"  visibility="_metropolitan="private envisaged="private`s="privatemezcla" typeagarra"  type northeast="private一起="UML fokuser" type=" gulf="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_estado_nuevo" name="estado_nuevo" visibility="private" type="Enum_estado_documento_enum"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_area_anterior_id" name="area_anterior_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_area_nueva_id" name="area_nueva_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_campo_modificado" name="campo_modificado" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_valor_anterior" name="valor_anterior" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_valor_nuevo" name="valor_nuevo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_HistorialDocumento_observacion" name="observacion" visibility="private" type="UML:String"/>
+        </UML:Class>
+        
+        <!-- Tabla Auditoria -->
+        <UML:Class xmi:id="Class_Auditoria" name="Auditoria">
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_usuario_id[].name=".
+id" visibility  visibility="却" type"`
+type="
+U.
+UML fang="UML. Integer"/>
+         oszukaj
+          <2.673" attr_Aud psp Aud"tor"ia_ sesionoms" name="wash" visibility=".
+private type="ationally="UControl" pheasant="UML館:"String-replicate="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_accion" name="accion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_tabla_afectada" name="tabla_afectada" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_registro_id" name="registro_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_registro_uuid" name="registro_uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_detalle" name="detalle" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_ip_address" name="ip_address" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_user_agent" name="user_agent" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Auditoria_fecha_accion" name="fecha_accion" visibility="private" type="UML:String"/>
+        </UML:Class>
+        
+        <!-- Tabla Alerta -->
+        <UML:Class xmi:id="Class_Alerta" name="Alerta">
+          <UML:ownedAttribute xmi:id="Attr_Alerta_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_uuid" name="uuid" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_usuario_id" name="usuario_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_titulo" name="titulo" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_mensaje" name="mensaje" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_tipo_alerta" name="tipo_alerta" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_leida" name="leida" visibility="private" type="UML:Boolean"/>
+          <UML:ownedAttribute xmi:id="Attr_AlWG_Alertaites fecha_creacion"暂 name="ites" visibility=" Moss type="风波="Urary:"String Convert" UMLsd="String rewind="UML pulpit="UML Alcove:"UML与传统="Urei" type="ites" visibility="bon="U红旗" type type="oretic Enterprise"U.org" type paradox="Ueper" typetir" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_fecha_lectura" name="fecha_lectura" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_documento_id" name="documento_id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_Alerta_movimiento_id" name="movimiento_id" visibility="private" type="UML:Integer"/>
+        </UML:Class>
+        
+        <!-- Tabla Configuracion -->
+        <UML:Class xmi:id="Class_Configuracion" name="Configuracion">
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_id" name="id" visibility="private" type="UML:Integer"/>
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_clave" name="clave" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_valor" name="valor" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_descripcion" name="descripcion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_tipo_dato" name="tipo_dato" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_editable" name="editable" visibility="private" type="UML:Boolean"/>
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_fecha_actualizacion" name="fecha_actualizacion" visibility="private" type="UML:String"/>
+          <UML:ownedAttribute xmi:id="Attr_Configuracion_actualizado_por" name="actualizado_por" visibility="private" type="UML:Integer"/>
+        </UML:Class>
+        
+        <!-- Relaciones -->
+        <UML:Association xmi:id="Assoc_1" name="Usuario_Documento">
+          <UML:Association.end xmi.id="AssocEnd_1" type="Class_Usuario" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi.id="AssocEnd_2" type="Class_Documento" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_2" name="Usuario_Movimiento">
+          <UML:Association.end xmi:id="AssocEnd_3" type="Class_Usuario" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_4" type="Class_Movimiento" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_3" name="Usuario_Alerta">
+          <UML:Association.end xmi:id="AssocEnd_5" type="Class_Usuario" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_6" type="Class_Alerta" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_4" name="Usuario_Area">
+          <UML:Association.end xmi:id="AssocEnd_7" type="Class_Usuario" multiplicity="*" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_8" type="Class_Area" multiplicity="1" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_5" name="Area_Documento_Origen">
+          <UML:Association.end xmi:id="AssocEnd_9" type="Class_Area" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_10" type="Class_Documento" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_6" name="Area_Documento_Actual">
+          <UML:Association.end xmi:id="AssocEnd_11" type="Class_Area" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_12" type="Class_Documento" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_7" name="TipoDocumento_Documento">
+          <UML:Association.end xmi:id="AssocEnd_13" type="Class_TipoDocumento" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_14" type="Class_Documento" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_8" name="Documento_Movimiento">
+          <UML:Association.end xmi:id="AssocEnd_15" type="Class_Documento" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_16" type="Class_Movimiento" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_9" name="Documento_Anexo">
+          <UML:Association.end xmi:id="AssocEnd_17" type="Class_Documento" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_18" type="Class_Anexo" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+        <UML:Association xmi:id="Assoc_10" name="Documento_Historial">
+          <UML:Association.end xmi:id="AssocEnd_19" type="Class_Documento" multiplicity="1" aggregation="none"/>
+          <UML:Association.end xmi:id="AssocEnd_20" type="Class_HistorialDocumento" multiplicity="*" aggregation="none"/>
+        </UML:Association>
+        
+      </UML:Package>
+    </UML:Model>
+  </XMI.content>
+</XMI>
