@@ -2,6 +2,8 @@
 
 ## Seguro Social Universitario de Tarija
 
+Es un proyecto de la Universidad Domingo Savio
+
 ### Descripción
 Sistema web desarrollado para optimizar la gestión documental del Seguro Social Universitario de Tarija, permitiendo la clasificación estructurada, localización eficiente y registro sistemático de movimientos de documentos físicos.
 
@@ -45,4 +47,3 @@ Ing. Yanet Colque Alarcon
 
 ### Año
 2025
-
