@@ -99,7 +99,7 @@ public class PermisosController : ControllerBase
     // GET: api/permisos/roles
     [HttpGet("roles")]
     [Authorize(Roles = "AdministradorSistema,Administrador")]
-    public ActionResult<object> GetRolesPermisos()
+    public async Task<ActionResult<object>> GetRolesPermisos()
     {
         var roles = new[] { "AdministradorSistema", "AdministradorDocumentos", "Contador", "Gerente" };
         
@@ -125,42 +125,37 @@ public class PermisosController : ControllerBase
             }
 
             // Intentar obtener datos
-            var result = Task.Run(async () =>
+            try
             {
-                try
+                var permisos = await _context.Permisos
+                    .Where(p => p.Activo)
+                    .OrderBy(p => p.Modulo)
+                    .ThenBy(p => p.Nombre)
+                    .ToListAsync();
+
+                var rolPermisos = await _context.RolPermisos
+                    .Where(rp => rp.Activo)
+                    .Include(rp => rp.Permiso)
+                    .ToListAsync();
+
+                var matriz = roles.Select(rol => new
                 {
-                    var permisos = await _context.Permisos
-                        .Where(p => p.Activo)
-                        .OrderBy(p => p.Modulo)
-                        .ThenBy(p => p.Nombre)
-                        .ToListAsync();
-
-                    var rolPermisos = await _context.RolPermisos
-                        .Where(rp => rp.Activo)
-                        .Include(rp => rp.Permiso)
-                        .ToListAsync();
-
-                    var matriz = roles.Select(rol => new
+                    rol,
+                    permisos = permisos.Select(permiso => new
                     {
-                        rol,
-                        permisos = permisos.Select(permiso => new
-                        {
-                            permiso.Id,
-                            permiso.Codigo,
-                            permiso.Nombre,
-                            tienePermiso = rolPermisos.Any(rp => rp.Rol == rol && rp.PermisoId == permiso.Id && rp.Activo)
-                        }).ToList()
-                    }).ToList();
+                        permiso.Id,
+                        permiso.Codigo,
+                        permiso.Nombre,
+                        tienePermiso = rolPermisos.Any(rp => rp.Rol == rol && rp.PermisoId == permiso.Id && rp.Activo)
+                    }).ToList()
+                }).ToList();
 
-                    return new { roles, permisos, matriz };
-                }
-                catch
-                {
-                    return emptyResponse;
-                }
-            }).GetAwaiter().GetResult();
-
-            return Ok(result);
+                return Ok(new { roles, permisos, matriz });
+            }
+            catch
+            {
+                return Ok(emptyResponse);
+            }
         }
         catch
         {
