@@ -28,7 +28,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
   String _searchQuery = '';
   String? _selectedRolFilter;
   String? _selectedAreaFilter;
-  bool? _selectedEstadoFilter;
+  bool? _selectedEstadoFilter = true;
   bool _isGridView = false;
 
   final TextEditingController _searchController = TextEditingController();
@@ -68,6 +68,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+        setState(() => _selectedEstadoFilter = true);
         _loadData(showRefreshIndicator: true);
       }
     } catch (e) {
