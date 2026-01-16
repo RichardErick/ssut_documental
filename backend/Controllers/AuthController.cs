@@ -55,31 +55,59 @@ public class AuthController : ControllerBase
         };
 
         _context.Usuarios.Add(newUser);
-        
-        // Notify Admins
-        var admins = await _context.Usuarios
-            .Where(u =>
-                u.Rol == UsuarioRol.Administrador ||
-                u.Rol == UsuarioRol.AdministradorDocumentos ||
-                u.Rol.ToString() == "AdministradorSistema")
-            .ToListAsync();
-
-        foreach (var admin in admins)
+        try
         {
-            _context.Alertas.Add(new Alerta
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new
             {
-                UsuarioId = admin.Id,
-                Titulo = "Nuevo Registro de Usuario",
-                Mensaje = $"Usuario {newUser.NombreCompleto} registrado. Requiere aprobación.",
-                TipoAlerta = "warning",
-                FechaCreacion = DateTime.UtcNow,
-                Leida = false
+                message = "Error guardando usuario en BD. Verifica que la tabla 'usuarios' tenga los campos y restricciones esperadas.",
+                error = ex.Message
             });
         }
 
-        await _context.SaveChangesAsync();
+        var alertsError = false;
 
-        return Ok(new { message = "Registro exitoso. Pendiente de aprobación." });
+        try
+        {
+            // Notify Admins
+            var admins = await _context.Usuarios
+                .Where(u =>
+                    u.Rol == UsuarioRol.Administrador ||
+                    u.Rol == UsuarioRol.AdministradorDocumentos ||
+                    u.Rol.ToString() == "AdministradorSistema")
+                .ToListAsync();
+
+            foreach (var admin in admins)
+            {
+                _context.Alertas.Add(new Alerta
+                {
+                    UsuarioId = admin.Id,
+                    Titulo = "Nuevo Registro de Usuario",
+                    Mensaje = $"Usuario {newUser.NombreCompleto} registrado. Requiere aprobaciA3n.",
+                    TipoAlerta = "warning",
+                    FechaCreacion = DateTime.UtcNow,
+                    Leida = false
+                });
+            }
+
+            if (admins.Count > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
+        catch
+        {
+            alertsError = true;
+        }
+
+        var responseMessage = alertsError
+            ? "Registro exitoso. No se pudo notificar a los administradores."
+            : "Registro exitoso. Pendiente de aprobaciA3n.";
+
+        return Ok(new { message = responseMessage });
     }
 
     private string HashPassword(string password)
