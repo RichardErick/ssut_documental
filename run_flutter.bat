@@ -10,7 +10,8 @@ setlocal EnableExtensions
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
-set "FLUTTER_DIR=%SCRIPT_DIR%\frontend"
+set "FLUTTER_DIR=%SCRIPT_
+DIR%\frontend"
 
 REM Fallback: search for pubspec.yaml if frontend\pubspec.yaml doesn't exist
 if not exist "%FLUTTER_DIR%\pubspec.yaml" (

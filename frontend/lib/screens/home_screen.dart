@@ -13,6 +13,7 @@ import 'admin/roles_permissions_screen.dart';
 import 'admin/users_sync_screen.dart';
 import 'documentos/documentos_list_screen.dart';
 import 'movimientos/movimientos_screen.dart';
+import 'notifications_screen.dart';
 import 'qr/qr_scanner_screen.dart';
 import 'reportes/reportes_screen.dart';
 
@@ -264,7 +265,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           color: theme.colorScheme.onSurface.withOpacity(0.7),
           size: 22,
         ),
-        onPressed: () {},
+        onPressed: () {
+          if (tooltip == 'Notificaciones') {
+             Navigator.of(context).push(
+               MaterialPageRoute(builder: (context) => const NotificationsScreen())
+             );
+          }
+        },
         tooltip: tooltip,
       ),
     );

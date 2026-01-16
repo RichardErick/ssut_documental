@@ -74,17 +74,30 @@ public class PermisosController : ControllerBase
                 rol = "AdministradorSistema";
             }
 
-            var permisos = await _context.RolPermisos
+            var permisosRolIds = await _context.RolPermisos
                 .Where(rp => rp.Rol == rol && rp.Activo)
-                .Include(rp => rp.Permiso)
-                .Where(rp => rp.Permiso.Activo)
-                .Select(rp => new
+                .Select(rp => rp.PermisoId)
+                .ToListAsync();
+
+            var permisosUsuarioIds = await _context.UsuarioPermisos
+                .Where(up => up.UsuarioId == usuarioId && up.Activo)
+                .Select(up => up.PermisoId)
+                .ToListAsync();
+
+            var permisoIds = permisosRolIds
+                .Union(permisosUsuarioIds)
+                .Distinct()
+                .ToList();
+
+            var permisos = await _context.Permisos
+                .Where(p => p.Activo && permisoIds.Contains(p.Id))
+                .Select(p => new
                 {
-                    rp.Permiso.Id,
-                    rp.Permiso.Codigo,
-                    rp.Permiso.Nombre,
-                    rp.Permiso.Descripcion,
-                    rp.Permiso.Modulo
+                    p.Id,
+                    p.Codigo,
+                    p.Nombre,
+                    p.Descripcion,
+                    p.Modulo
                 })
                 .ToListAsync();
 
@@ -160,6 +173,64 @@ public class PermisosController : ControllerBase
         catch
         {
             return Ok(emptyResponse);
+        }
+    }
+
+    // GET: api/permisos/usuarios/{id}
+    [HttpGet("usuarios/{id}")]
+    [Authorize(Roles = "AdministradorSistema,Administrador")]
+    public async Task<ActionResult<object>> GetPermisosUsuarioAdmin(int id)
+    {
+        try
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado" });
+            }
+
+            var rol = usuario.Rol.ToString();
+            if (rol == "Administrador")
+            {
+                rol = "AdministradorSistema";
+            }
+
+            var permisos = await _context.Permisos
+                .Where(p => p.Activo)
+                .OrderBy(p => p.Modulo)
+                .ThenBy(p => p.Nombre)
+                .ToListAsync();
+
+            var permisosRolIds = await _context.RolPermisos
+                .Where(rp => rp.Rol == rol && rp.Activo)
+                .Select(rp => rp.PermisoId)
+                .ToListAsync();
+
+            var permisosUsuarioIds = await _context.UsuarioPermisos
+                .Where(up => up.UsuarioId == id && up.Activo)
+                .Select(up => up.PermisoId)
+                .ToListAsync();
+
+            var rolSet = new HashSet<int>(permisosRolIds);
+            var usuarioSet = new HashSet<int>(permisosUsuarioIds);
+
+            var response = permisos.Select(p => new
+            {
+                p.Id,
+                p.Codigo,
+                p.Nombre,
+                p.Descripcion,
+                p.Modulo,
+                p.Activo,
+                roleHas = rolSet.Contains(p.Id),
+                userHas = usuarioSet.Contains(p.Id)
+            }).ToList();
+
+            return Ok(new { usuarioId = id, rol, permisos = response });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Error al obtener permisos: {ex.Message}" });
         }
     }
 
@@ -298,6 +369,93 @@ public class PermisosController : ControllerBase
             return StatusCode(500, new { message = $"Error al actualizar permisos: {ex.Message}" });
         }
     }
+
+    // POST: api/permisos/usuarios/asignar
+    [HttpPost("usuarios/asignar")]
+    [Authorize(Roles = "AdministradorSistema,Administrador")]
+    public async Task<ActionResult> AsignarPermisoUsuario([FromBody] AsignarPermisoUsuarioDTO dto)
+    {
+        if (dto.UsuarioId <= 0 || dto.PermisoId <= 0)
+        {
+            return BadRequest(new { message = "UsuarioId y PermisoId son requeridos" });
+        }
+
+        try
+        {
+            var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado" });
+            }
+
+            var permiso = await _context.Permisos.FindAsync(dto.PermisoId);
+            if (permiso == null)
+            {
+                return NotFound(new { message = "Permiso no encontrado" });
+            }
+
+            var usuarioPermiso = await _context.UsuarioPermisos
+                .FirstOrDefaultAsync(up => up.UsuarioId == dto.UsuarioId && up.PermisoId == dto.PermisoId);
+
+            if (usuarioPermiso == null)
+            {
+                usuarioPermiso = new UsuarioPermiso
+                {
+                    UsuarioId = dto.UsuarioId,
+                    PermisoId = dto.PermisoId,
+                    Activo = true,
+                    FechaAsignacion = DateTime.UtcNow
+                };
+                _context.UsuarioPermisos.Add(usuarioPermiso);
+            }
+            else
+            {
+                usuarioPermiso.Activo = true;
+                usuarioPermiso.FechaAsignacion = DateTime.UtcNow;
+                _context.UsuarioPermisos.Update(usuarioPermiso);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Permiso asignado al usuario correctamente" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Error al asignar permiso: {ex.Message}" });
+        }
+    }
+
+    // POST: api/permisos/usuarios/revocar
+    [HttpPost("usuarios/revocar")]
+    [Authorize(Roles = "AdministradorSistema,Administrador")]
+    public async Task<ActionResult> RevocarPermisoUsuario([FromBody] AsignarPermisoUsuarioDTO dto)
+    {
+        if (dto.UsuarioId <= 0 || dto.PermisoId <= 0)
+        {
+            return BadRequest(new { message = "UsuarioId y PermisoId son requeridos" });
+        }
+
+        try
+        {
+            var usuarioPermiso = await _context.UsuarioPermisos
+                .FirstOrDefaultAsync(up => up.UsuarioId == dto.UsuarioId && up.PermisoId == dto.PermisoId);
+
+            if (usuarioPermiso == null)
+            {
+                return NotFound(new { message = "Permiso no asignado a este usuario" });
+            }
+
+            usuarioPermiso.Activo = false;
+            _context.UsuarioPermisos.Update(usuarioPermiso);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Permiso revocado correctamente" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Error al revocar permiso: {ex.Message}" });
+        }
+    }
 }
 
 // DTOs
@@ -311,4 +469,10 @@ public class BulkAsignarPermisosDTO
 {
     public string Rol { get; set; } = string.Empty;
     public List<int> PermisoIds { get; set; } = new();
+}
+
+public class AsignarPermisoUsuarioDTO
+{
+    public int UsuarioId { get; set; }
+    public int PermisoId { get; set; }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SistemaGestionDocumental.Data;
+using SistemaGestionDocumental.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -21,6 +22,71 @@ public class AuthController : ControllerBase
     {
         _context = context;
         _configuration = configuration;
+    }
+
+    [HttpPost("register")]
+    public async Task<ActionResult> Register([FromBody] RegisterRequest dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Username) ||
+            string.IsNullOrWhiteSpace(dto.Password) ||
+            string.IsNullOrWhiteSpace(dto.NombreCompleto) ||
+            string.IsNullOrWhiteSpace(dto.Email))
+            return BadRequest(new { message = "Todos los campos son obligatorios" });
+
+        var username = dto.Username.Trim();
+        var email = dto.Email.Trim();
+
+        if (await _context.Usuarios.AnyAsync(u => u.NombreUsuario == username))
+            return BadRequest(new { message = "El nombre de usuario ya está en uso" });
+
+        if (await _context.Usuarios.AnyAsync(u => u.Email == email))
+            return BadRequest(new { message = "El email ya está en uso" });
+
+        var newUser = new SistemaGestionDocumental.Models.Usuario
+        {
+            NombreUsuario = username,
+            NombreCompleto = dto.NombreCompleto.Trim(),
+            Email = email,
+            PasswordHash = HashPassword(dto.Password),
+            Rol = UsuarioRol.Contador,
+            Activo = false,
+            FechaRegistro = DateTime.UtcNow,
+            FechaActualizacion = DateTime.UtcNow
+        };
+
+        _context.Usuarios.Add(newUser);
+        
+        // Notify Admins
+        var admins = await _context.Usuarios
+            .Where(u => u.Rol == UsuarioRol.Administrador || u.Rol.ToString() == "AdministradorSistema")
+            .ToListAsync();
+
+        foreach (var admin in admins)
+        {
+            _context.Alertas.Add(new Alerta
+            {
+                UsuarioId = admin.Id,
+                Titulo = "Nuevo Registro de Usuario",
+                Mensaje = $"Usuario {newUser.NombreCompleto} registrado. Requiere aprobación.",
+                TipoAlerta = "warning",
+                FechaCreacion = DateTime.UtcNow,
+                Leida = false
+            });
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Registro exitoso. Pendiente de aprobación." });
+    }
+
+    private string HashPassword(string password)
+    {
+        const int iterations = 100_000;
+        Span<byte> salt = stackalloc byte[16];
+        RandomNumberGenerator.Fill(salt);
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt.ToArray(), iterations, HashAlgorithmName.SHA256);
+        var hash = pbkdf2.GetBytes(32);
+        return $"pbkdf2${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
     }
 
     [HttpPost("login")]
@@ -253,6 +319,14 @@ public class AuthController : ControllerBase
         // Fallback (legacy): treat stored as plain text
         return string.Equals(password, stored, StringComparison.Ordinal);
     }
+}
+
+public class RegisterRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string NombreCompleto { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
 }
 
 public class LoginRequest

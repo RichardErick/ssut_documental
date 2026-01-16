@@ -22,6 +22,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Configuracion> Configuraciones { get; set; }
     public DbSet<Permiso> Permisos { get; set; }
     public DbSet<RolPermiso> RolPermisos { get; set; }
+    public DbSet<UsuarioPermiso> UsuarioPermisos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -244,6 +245,21 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(rp => rp.PermisoId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        modelBuilder.Entity<UsuarioPermiso>(entity =>
+        {
+            entity.HasIndex(up => new { up.UsuarioId, up.PermisoId }).IsUnique();
+            entity.HasIndex(up => up.UsuarioId);
+
+            entity.HasOne(up => up.Usuario)
+                .WithMany()
+                .HasForeignKey(up => up.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(up => up.Permiso)
+                .WithMany()
+                .HasForeignKey(up => up.PermisoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }
-

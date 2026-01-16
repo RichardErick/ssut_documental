@@ -8,6 +8,7 @@ import '../utils/error_helper.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/glass_container.dart';
 import 'forgot_password_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -329,132 +330,55 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                                 const SizedBox(height: 40),
                                 _buildLoginButton(isDark: true),
-                                const SizedBox(height: 24),
-                                // Footer for Desktop
-                                Center(
-                                  child: Text(
-                                    'SSUT - Gestión Documental v1.0',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade400,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-              : AnimatedBackground(
-                // Mobile/Tablet View (Original Glassmorphism)
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24.0),
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: Container(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: GlassContainer(
-                            blur: 20,
-                            opacity: 0.15,
-                            padding: const EdgeInsets.all(40.0),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildLogo(),
-                                  const SizedBox(height: 32),
-                                  _buildTitle(),
-                                  const SizedBox(height: 48),
-                                  _buildTextField(
-                                    controller: _usernameController,
-                                    label: 'Usuario',
-                                    hint: 'Ingrese su usuario',
-                                    icon: Icons.person_outline_rounded,
-                                    validator: (v) {
-                                      if (v == null || v.isEmpty)
-                                        return 'Ingrese su usuario';
-                                      if (v.length < 4 || v.length > 20)
-                                        return 'Debe tener entre 4 y 20 caracteres';
-                                      if (!RegExp(
-                                        r'^[a-zA-Z0-9]+$',
-                                      ).hasMatch(v))
-                                        return 'Solo se permiten letras y números';
-                                      return null;
-                                    },
-                                  ),
                                   const SizedBox(height: 24),
-                                  _buildTextField(
-                                    controller: _passwordController,
-                                    label: 'Contraseña',
-                                    hint: 'Ingrese su contraseña',
-                                    icon: Icons.lock_outline_rounded,
-                                    isPassword: true,
-                                    validator: (v) {
-                                      if (v == null || v.isEmpty)
-                                        return 'Ingrese su contraseña';
-                                      if (v.length < 8)
-                                        return 'Mínimo 8 caracteres';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Checkbox(
-                                            value: _rememberMe,
-                                            activeColor: Colors.white,
-                                            checkColor: Colors.blue.shade900,
-                                            onChanged: (val) {
-                                              setState(() {
-                                                _rememberMe = val ?? false;
-                                              });
-                                            },
+                                  Center(
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => const RegisterScreen(),
                                           ),
-                                          const Text(
-                                            'Recordarme',
-                                            style: TextStyle(
-                                              color: Colors.white70,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (_) =>
-                                                      const ForgotPasswordScreen(),
-                                            ),
-                                          );
-                                        },
-                                        child: const Text(
-                                          '¿Olvidó su contraseña?',
+                                        );
+                                      },
+                                      child: RichText(
+                                        text: TextSpan(
+                                          text: '¿No tienes cuenta? ',
                                           style: TextStyle(
-                                            decoration:
-                                                TextDecoration.underline,
-                                            color: Colors.white70,
+                                            color: isDesktop
+                                                ? Colors.grey.shade600
+                                                : Colors.white70,
                                           ),
+                                          children: [
+                                            TextSpan(
+                                              text: 'Registrarse',
+                                              style: TextStyle(
+                                                color: isDesktop
+                                                    ? Colors.blue.shade900
+                                                    : Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 40),
-                                  _buildLoginButton(),
                                   const SizedBox(height: 24),
-                                  _buildFooter(),
+                                  // Footer
+                                  if (isDesktop)
+                                    Center(
+                                      child: Text(
+                                        'SSUT - Gestión Documental v1.0',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade400,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    _buildFooter(),
                                 ],
                               ),
                             ),
