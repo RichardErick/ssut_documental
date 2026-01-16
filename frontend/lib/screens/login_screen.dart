@@ -387,8 +387,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                   ),
-                ),
-              ]
+                ],
               )
               : _buildMobileLayout(),
     );
