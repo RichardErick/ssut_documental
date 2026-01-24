@@ -72,7 +72,7 @@ class _DocumentoSearchScreenState extends State<DocumentoSearchScreen> {
 
       final resultados = await service.buscar(busqueda);
       setState(() {
-        _resultados = resultados;
+        _resultados = resultados.items;
         _isSearching = false;
       });
     } catch (e) {
