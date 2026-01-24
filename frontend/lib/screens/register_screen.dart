@@ -22,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _fullnameController = TextEditingController();
   final _emailController = TextEditingController();
   
+  String _selectedRole = 'Contador';
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -46,6 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'password': _passwordController.text,
           'nombreCompleto': _fullnameController.text,
           'email': _emailController.text,
+          'rol': _selectedRole,
         });
 
         if (mounted) {
@@ -179,6 +181,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             if (!v.contains('@')) return 'Email inválido';
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, bottom: 8),
+                              child: Text(
+                                'Rol',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedRole,
+                                  isExpanded: true,
+                                  dropdownColor: Colors.blue.shade900,
+                                  style: GoogleFonts.inter(color: Colors.white),
+                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                                  items: [
+                                    {'val': 'Contador', 'label': 'Contador'},
+                                    {'val': 'Gerente', 'label': 'Gerente'},
+                                    {'val': 'AdministradorDocumentos', 'label': 'Admin. Documentos'},
+                                  ].map((item) {
+                                    return DropdownMenuItem<String>(
+                                      value: item['val'],
+                                      child: Text(item['label']!),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setState(() => _selectedRole = val);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                         _buildTextField(

@@ -42,13 +42,18 @@ public class AuthController : ControllerBase
         if (await _context.Usuarios.AnyAsync(u => u.Email == email))
             return BadRequest(new { message = "El email ya está en uso" });
 
+        if (!Enum.TryParse<UsuarioRol>(dto.Rol, true, out var rolEnum))
+        {
+            rolEnum = UsuarioRol.Contador; // Default fallback
+        }
+
         var newUser = new SistemaGestionDocumental.Models.Usuario
         {
             NombreUsuario = username,
             NombreCompleto = dto.NombreCompleto.Trim(),
             Email = email,
             PasswordHash = HashPassword(dto.Password),
-            Rol = UsuarioRol.Contador,
+            Rol = rolEnum,
             Activo = false,
             FechaRegistro = DateTime.UtcNow,
             FechaActualizacion = DateTime.UtcNow
@@ -358,6 +363,7 @@ public class RegisterRequest
     public string Password { get; set; } = string.Empty;
     public string NombreCompleto { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string Rol { get; set; } = "Contador";
 }
 
 public class LoginRequest
