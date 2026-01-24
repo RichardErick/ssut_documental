@@ -70,7 +70,7 @@ public class DocumentosController : ControllerBase
                 CodigoQR = d.CodigoQR,
                 UrlQR = d.UrlQR,
                 UbicacionFisica = d.UbicacionFisica,
-                Estado = d.Estado,
+                Estado = d.Estado.ToString(),
                 Activo = d.Activo,
                 NivelConfidencialidad = d.NivelConfidencialidad,
                 FechaRegistro = d.FechaRegistro,
@@ -125,7 +125,7 @@ public class DocumentosController : ControllerBase
                 CodigoQR = d.CodigoQR,
                 UrlQR = d.UrlQR,
                 UbicacionFisica = d.UbicacionFisica,
-                Estado = d.Estado,
+                Estado = d.Estado.ToString(),
                 Activo = d.Activo,
                 NivelConfidencialidad = d.NivelConfidencialidad,
                 FechaRegistro = d.FechaRegistro,
@@ -185,7 +185,7 @@ public class DocumentosController : ControllerBase
             CodigoQR = documento.CodigoQR,
             UrlQR = documento.UrlQR,
             UbicacionFisica = documento.UbicacionFisica,
-            Estado = documento.Estado,
+            Estado = documento.Estado.ToString(),
             Activo = documento.Activo,
             NivelConfidencialidad = documento.NivelConfidencialidad,
             FechaRegistro = documento.FechaRegistro,
@@ -281,7 +281,7 @@ public class DocumentosController : ControllerBase
             UbicacionFisica = dto.UbicacionFisica,
             CarpetaId = dto.CarpetaId,
             NivelConfidencialidad = dto.NivelConfidencialidad,
-            Estado = "Activo",
+            Estado = EstadoDocumento.Activo,
             Activo = true,
             FechaRegistro = DateTime.UtcNow,
             FechaActualizacion = DateTime.UtcNow
@@ -323,7 +323,7 @@ public class DocumentosController : ControllerBase
                 CodigoQR = documentoCompleto.CodigoQR,
                 UrlQR = documentoCompleto.UrlQR,
                 UbicacionFisica = documentoCompleto.UbicacionFisica,
-                Estado = documentoCompleto.Estado,
+                Estado = documentoCompleto.Estado.ToString(),
                 Activo = documentoCompleto.Activo,
                 NivelConfidencialidad = documentoCompleto.NivelConfidencialidad,
                 FechaRegistro = documentoCompleto.FechaRegistro,
@@ -425,8 +425,8 @@ public class DocumentosController : ControllerBase
             documento.CarpetaId = dto.CarpetaId.Value;
         }
 
-        if (!string.IsNullOrWhiteSpace(dto.Estado))
-            documento.Estado = dto.Estado;
+        if (!string.IsNullOrWhiteSpace(dto.Estado) && Enum.TryParse<EstadoDocumento>(dto.Estado, true, out var nuevoEstado))
+            documento.Estado = nuevoEstado;
 
         if (dto.NivelConfidencialidad.HasValue)
             documento.NivelConfidencialidad = dto.NivelConfidencialidad.Value;
@@ -480,7 +480,7 @@ public class DocumentosController : ControllerBase
         {
             // Borrado lógico
             documento.Activo = false;
-            documento.Estado = "Eliminado";
+            documento.Estado = EstadoDocumento.Eliminado;
             documento.FechaActualizacion = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -571,9 +571,9 @@ public class DocumentosController : ControllerBase
             query = query.Where(d => d.FechaDocumento <= fechaHastaUtc);
         }
 
-        if (!string.IsNullOrWhiteSpace(filtros.Estado))
+        if (!string.IsNullOrWhiteSpace(filtros.Estado) && Enum.TryParse<EstadoDocumento>(filtros.Estado, true, out var estadoFiltro))
         {
-            query = query.Where(d => d.Estado == filtros.Estado);
+            query = query.Where(d => d.Estado == estadoFiltro);
         }
 
         if (filtros.ResponsableId.HasValue)
@@ -634,7 +634,7 @@ public class DocumentosController : ControllerBase
                 CodigoQR = d.CodigoQR,
                 UrlQR = d.UrlQR,
                 UbicacionFisica = d.UbicacionFisica,
-                Estado = d.Estado,
+                Estado = d.Estado.ToString(),
                 Activo = d.Activo,
                 NivelConfidencialidad = d.NivelConfidencialidad,
                 FechaRegistro = d.FechaRegistro,
@@ -702,8 +702,8 @@ public class DocumentosController : ControllerBase
                 DocumentoId = documento.Id,
                 FechaCambio = DateTime.UtcNow,
                 // UsuarioId = TODO: Obtener del contexto de autenticación
-                EstadoAnterior = documento.Estado,
-                EstadoNuevo = documento.Estado,
+                EstadoAnterior = documento.Estado.ToString(),
+                EstadoNuevo = documento.Estado.ToString(),
                 Observacion = dto.Observaciones ?? "Movimiento en lote de documentos"
             };
             _context.HistorialesDocumento.Add(historial);

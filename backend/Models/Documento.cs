@@ -85,7 +85,7 @@ public class Documento
     public string? UbicacionFisica { get; set; }
 
     [Column("estado")]
-    public string Estado { get; set; } = "Activo"; // Activo, Inactivo, Archivado, Eliminado
+    public EstadoDocumento Estado { get; set; } = EstadoDocumento.Activo;
 
     [Column("activo")]
     public bool Activo { get; set; } = true;
