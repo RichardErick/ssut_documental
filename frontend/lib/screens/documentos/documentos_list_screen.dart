@@ -8,8 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_shimmer.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_shimmer.dart';
+
 import 'documento_detail_screen.dart';
 import 'documento_form_screen.dart';
 import 'carpetas_screen.dart';
@@ -59,7 +58,7 @@ class _DocumentosListScreenState extends State<DocumentosListScreen>
       final service = Provider.of<DocumentoService>(context, listen: false);
       final documentos = await service.getAll();
       setState(() {
-        _documentos = documentos;
+        _documentos = documentos.items;
         _estaCargando = false;
       });
     } catch (e) {
