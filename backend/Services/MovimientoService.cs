@@ -72,11 +72,11 @@ public class MovimientoService : IMovimientoService
         // Actualizar estado del documento según el tipo de movimiento
         if (dto.TipoMovimiento == "Salida" || dto.TipoMovimiento == "Derivacion")
         {
-            documento.Estado = "Prestado";
+            documento.Estado = EstadoDocumento.Prestado;
         }
         else if (dto.TipoMovimiento == "Entrada")
         {
-            documento.Estado = "Activo";
+            documento.Estado = EstadoDocumento.Activo;
         }
 
         var movimiento = new Movimiento
@@ -114,7 +114,7 @@ public class MovimientoService : IMovimientoService
         // Actualizar estado del documento
         if (movimiento.Documento != null)
         {
-            movimiento.Documento.Estado = "Activo";
+            movimiento.Documento.Estado = EstadoDocumento.Activo;
         }
 
         await _context.SaveChangesAsync();
