@@ -175,6 +175,15 @@ class DocumentoService {
     final response = await apiService.post('/documentos/$id/qr');
     return response.data;
   }
+
+  Future<Documento?> getByQRCode(String qrCode) async {
+    final apiService = Provider.of<ApiService>(
+      navigatorKey.currentContext!,
+      listen: false,
+    );
+    final response = await apiService.get('/documentos/qr/$qrCode');
+    return Documento.fromJson(response.data);
+  }
   
   Future<void> moverLote(List<int> documentoIds, int carpetaDestinoId, {String? observaciones}) async {
     final apiService = Provider.of<ApiService>(
