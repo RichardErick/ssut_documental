@@ -179,7 +179,7 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(h => h.DocumentoId);
             
             entity.HasOne(h => h.Documento)
-                .WithMany()
+                .WithMany(d => d.HistorialDocumentos)
                 .HasForeignKey(h => h.DocumentoId)
                 .OnDelete(DeleteBehavior.Cascade);
 

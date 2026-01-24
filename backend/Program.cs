@@ -219,8 +219,7 @@ BEGIN
         EXECUTE 'DROP VIEW IF EXISTS vista_documentos_completa';
     END IF;
 
-    -- Convierte columnas enum a texto (ignora si ya est
-n en texto)
+    -- Convierte columnas enum a texto (ignora si ya están en texto)
     BEGIN
         ALTER TABLE documentos ALTER COLUMN estado TYPE VARCHAR(50) USING estado::text;
     EXCEPTION WHEN undefined_column THEN
