@@ -215,9 +215,13 @@ public class DocumentosController : ControllerBase
         var gestion = dto.Gestion?.Trim();
 
         // Validaciones
-        // Permitimos más flexibilidad: números, letras, guiones. Longitud hasta 20.
-        if (string.IsNullOrWhiteSpace(numeroCorrelativo) || numeroCorrelativo.Length > 20)
-            return BadRequest(new { message = "El número correlativo es inválido (máx 20 caracteres)" });
+        // Normalizamos a solo dígitos para evitar errores por espacios/separadores
+        var correlativoDigits = string.IsNullOrWhiteSpace(numeroCorrelativo)
+            ? string.Empty
+            : Regex.Replace(numeroCorrelativo, @"\D", "");
+
+        if (string.IsNullOrWhiteSpace(correlativoDigits) || correlativoDigits.Length > 6)
+            return BadRequest(new { message = "El número correlativo debe tener entre 1 y 6 dígitos numéricos" });
 
         if (string.IsNullOrWhiteSpace(gestion) || !Regex.IsMatch(gestion, @"^[0-9]{4}$"))
             return BadRequest(new { message = "La gestión debe tener 4 dígitos numéricos" });
@@ -251,7 +255,7 @@ public class DocumentosController : ControllerBase
                 return BadRequest(new { message = "Carpeta no encontrada" });
         }
 
-        var correlativoFormateado = numeroCorrelativo.PadLeft(4, '0');
+        var correlativoFormateado = correlativoDigits.PadLeft(4, '0');
         var tipoCodigo = (tipoDocumento.Codigo ?? "DOC").ToUpperInvariant();
         var areaCodigo = (area.Codigo ?? "AREA").ToUpperInvariant();
 
