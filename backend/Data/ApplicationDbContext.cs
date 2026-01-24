@@ -43,6 +43,10 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(d => d.FechaDocumento);
             entity.HasIndex(d => d.ResponsableId);
             
+            // Fix: Mapear explícitamente el tipo de columna para el enum de PostgreSQL
+            entity.Property(d => d.Estado)
+                .HasColumnType("estado_documento_enum");
+
             // Relaciones
             entity.HasOne(d => d.TipoDocumento)
                 .WithMany(t => t.Documentos)
