@@ -285,29 +285,61 @@ public class DocumentosController : ControllerBase
         try
         {
             _context.Documentos.Add(documento);
+            documento.FechaActualizacion = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
+            
+            // Cargar el documento completo con relaciones para devolver el DTO correcto
+            var documentoCompleto = await _context.Documentos
+                .Include(d => d.TipoDocumento)
+                .Include(d => d.AreaOrigen)
+                .Include(d => d.Responsable)
+                .Include(d => d.Carpeta)
+                    .ThenInclude(c => c!.CarpetaPadre)
+                .Include(d => d.DocumentoPalabrasClaves)
+                    .ThenInclude(dpc => dpc.PalabraClave)
+                .FirstOrDefaultAsync(d => d.Id == documento.Id);
 
-            // El trigger de la BD generará el IdDocumento automáticamente
-            // Recargar el documento para obtener el IdDocumento generado
-            await _context.Entry(documento).ReloadAsync();
-
-            // Agregar palabras clave si se proporcionan
-            if (dto.PalabrasClaveIds != null && dto.PalabrasClaveIds.Any())
+            if (documentoCompleto == null)
             {
-                foreach (var palabraClaveId in dto.PalabrasClaveIds)
-                {
-                    var palabraClave = await _context.PalabrasClaves.FindAsync(palabraClaveId);
-                    if (palabraClave != null)
-                    {
-                        _context.DocumentoPalabrasClaves.Add(new DocumentoPalabraClave
-                        {
-                            DocumentoId = documento.Id,
-                            PalabraClaveId = palabraClaveId
-                        });
-                    }
-                }
-                await _context.SaveChangesAsync();
+                // Fallback por si acaso (no debería ocurrir)
+                return CreatedAtAction(nameof(GetById), new { id = documento.Id }, documento);
             }
+
+            var resultDto = new DocumentoDTO
+            {
+                Id = documentoCompleto.Id,
+                IdDocumento = documentoCompleto.IdDocumento ?? string.Empty,
+                Codigo = documentoCompleto.Codigo,
+                NumeroCorrelativo = documentoCompleto.NumeroCorrelativo,
+                Gestion = documentoCompleto.Gestion,
+                FechaDocumento = documentoCompleto.FechaDocumento,
+                Descripcion = documentoCompleto.Descripcion,
+                CodigoQR = documentoCompleto.CodigoQR,
+                UrlQR = documentoCompleto.UrlQR,
+                UbicacionFisica = documentoCompleto.UbicacionFisica,
+                Estado = documentoCompleto.Estado,
+                Activo = documentoCompleto.Activo,
+                NivelConfidencialidad = documentoCompleto.NivelConfidencialidad,
+                FechaRegistro = documentoCompleto.FechaRegistro,
+                FechaActualizacion = documentoCompleto.FechaActualizacion,
+                TipoDocumentoId = documentoCompleto.TipoDocumentoId,
+                TipoDocumentoNombre = documentoCompleto.TipoDocumento != null ? documentoCompleto.TipoDocumento.Nombre : null,
+                TipoDocumentoCodigo = documentoCompleto.TipoDocumento != null ? documentoCompleto.TipoDocumento.Codigo : null,
+                AreaOrigenId = documentoCompleto.AreaOrigenId,
+                AreaOrigenNombre = documentoCompleto.AreaOrigen != null ? documentoCompleto.AreaOrigen.Nombre : null,
+                AreaOrigenCodigo = documentoCompleto.AreaOrigen != null ? documentoCompleto.AreaOrigen.Codigo : null,
+                ResponsableId = documentoCompleto.ResponsableId,
+                ResponsableNombre = documentoCompleto.Responsable != null ? documentoCompleto.Responsable.NombreCompleto : null,
+                CarpetaId = documentoCompleto.CarpetaId,
+                CarpetaNombre = documentoCompleto.Carpeta != null ? documentoCompleto.Carpeta.Nombre : null,
+                CarpetaPadreNombre = documentoCompleto.Carpeta != null && documentoCompleto.Carpeta.CarpetaPadre != null ? documentoCompleto.Carpeta.CarpetaPadre.Nombre : null,
+                PalabrasClave = documentoCompleto.DocumentoPalabrasClaves.Select(dpc => dpc.PalabraClave.Palabra).ToList()
+            };
+
+            // TODO: Registrar en auditoría
+
+            return CreatedAtAction(nameof(GetById), new { id = documento.Id }, resultDto);
         }
         catch (DbUpdateException ex)
         {
@@ -325,21 +357,8 @@ public class DocumentosController : ControllerBase
                 return BadRequest(new { message = "Ya existe un documento con ese código. Ajuste el número correlativo." });
             }
 
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "No se pudo guardar el documento en la base de datos." });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = $"No se pudo guardar el documento en la base de datos. Detalle: {innerMessage}" });
         }
-
-        // TODO: Registrar en auditoría
-
-        return CreatedAtAction(nameof(GetById), new { id = documento.Id }, new
-        {
-            documento.Id,
-            documento.IdDocumento,
-            documento.Codigo,
-            documento.NumeroCorrelativo,
-            documento.Gestion,
-            documento.FechaDocumento,
-            documento.FechaRegistro
-        });
     }
 
     // PUT: api/documentos/{id}
