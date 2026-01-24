@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS documentos (
     fecha_vencimiento DATE,
     fecha_registro TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT codigo_formato CHECK (codigo ~* '^[A-Z]{2,4}-[0-9]{4}-[0-9]{6}$')
+    CONSTRAINT codigo_formato CHECK (codigo ~* '^[A-Z0-9]{2,10}-[A-Z0-9]{2,10}-[0-9]{4}-[0-9]{4,6}$')
 );
 
 -- Tabla de Movimientos mejorada

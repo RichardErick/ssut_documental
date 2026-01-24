@@ -81,7 +81,8 @@ UPDATE documentos SET area_actual_id = area_origen_id WHERE area_actual_id IS NU
 
 -- Agregar constraints
 ALTER TABLE documentos ADD CONSTRAINT gestion_formato CHECK (gestion ~* '^[0-9]{4}$');
-ALTER TABLE documentos ADD CONSTRAINT codigo_formato CHECK (codigo ~* '^[A-Z]{2,4}-[0-9]{4}-[0-9]{6}$');
+ALTER TABLE documentos DROP CONSTRAINT IF EXISTS codigo_formato;
+ALTER TABLE documentos ADD CONSTRAINT codigo_formato CHECK (codigo ~* '^[A-Z0-9]{2,10}-[A-Z0-9]{2,10}-[0-9]{4}-[0-9]{4,6}$');
 ALTER TABLE documentos ADD CONSTRAINT nivel_confidencialidad_rango CHECK (nivel_confidencialidad BETWEEN 1 AND 5);
 
 -- Tabla movimientos

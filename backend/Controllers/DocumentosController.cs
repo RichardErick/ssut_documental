@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaGestionDocumental.Data;
@@ -6,6 +7,7 @@ using SistemaGestionDocumental.DTOs;
 using SistemaGestionDocumental.Models;
 
 using SistemaGestionDocumental.Services;
+using System.Text.RegularExpressions;
 
 namespace SistemaGestionDocumental.Controllers;
 
@@ -209,12 +211,18 @@ public class DocumentosController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<DocumentoDTO>> Create([FromBody] CreateDocumentoDTO dto)
     {
-        // Validaciones
-        if (string.IsNullOrWhiteSpace(dto.NumeroCorrelativo))
-            return BadRequest(new { message = "El número correlativo es obligatorio" });
+        var numeroCorrelativo = dto.NumeroCorrelativo?.Trim();
+        var gestion = dto.Gestion?.Trim();
 
-        if (string.IsNullOrWhiteSpace(dto.Gestion) || dto.Gestion.Length != 4)
-            return BadRequest(new { message = "La gestión debe tener 4 dígitos" });
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(numeroCorrelativo) || !Regex.IsMatch(numeroCorrelativo, @"^[0-9]{1,6}$"))
+            return BadRequest(new { message = "El número correlativo debe tener entre 1 y 6 dígitos numéricos" });
+
+        if (string.IsNullOrWhiteSpace(gestion) || !Regex.IsMatch(gestion, @"^[0-9]{4}$"))
+            return BadRequest(new { message = "La gestión debe tener 4 dígitos numéricos" });
+
+        if (dto.NivelConfidencialidad < 1 || dto.NivelConfidencialidad > 5)
+            return BadRequest(new { message = "El nivel de confidencialidad debe estar entre 1 y 5" });
 
         // Verificar que tipo de documento existe
         var tipoDocumento = await _context.TiposDocumento.FindAsync(dto.TipoDocumentoId);
@@ -242,8 +250,12 @@ public class DocumentosController : ControllerBase
                 return BadRequest(new { message = "Carpeta no encontrada" });
         }
 
+        var correlativoFormateado = numeroCorrelativo.PadLeft(4, '0');
+        var tipoCodigo = (tipoDocumento.Codigo ?? "DOC").ToUpperInvariant();
+        var areaCodigo = (area.Codigo ?? "AREA").ToUpperInvariant();
+
         // Generar código único
-        var codigo = $"{tipoDocumento.Codigo}-{area.Codigo}-{dto.Gestion}-{dto.NumeroCorrelativo.PadLeft(4, '0')}";
+        var codigo = $"{tipoCodigo}-{areaCodigo}-{gestion}-{correlativoFormateado}";
 
         // Verificar que el código no exista
         var codigoExists = await _context.Documentos.AnyAsync(d => d.Codigo == codigo);
@@ -253,11 +265,11 @@ public class DocumentosController : ControllerBase
         var documento = new Documento
         {
             Codigo = codigo,
-            NumeroCorrelativo = dto.NumeroCorrelativo,
+            NumeroCorrelativo = correlativoFormateado,
             TipoDocumentoId = dto.TipoDocumentoId,
             AreaOrigenId = dto.AreaOrigenId,
             AreaActualId = dto.AreaOrigenId, // Inicialmente es la misma
-            Gestion = dto.Gestion,
+            Gestion = gestion,
             FechaDocumento = DateTime.SpecifyKind(dto.FechaDocumento, DateTimeKind.Utc),
             Descripcion = dto.Descripcion,
             ResponsableId = dto.ResponsableId,
@@ -270,29 +282,50 @@ public class DocumentosController : ControllerBase
             FechaActualizacion = DateTime.UtcNow
         };
 
-        _context.Documentos.Add(documento);
-        await _context.SaveChangesAsync();
-
-        // El trigger de la BD generará el IdDocumento automáticamente
-        // Recargar el documento para obtener el IdDocumento generado
-        await _context.Entry(documento).ReloadAsync();
-
-        // Agregar palabras clave si se proporcionan
-        if (dto.PalabrasClaveIds != null && dto.PalabrasClaveIds.Any())
+        try
         {
-            foreach (var palabraClaveId in dto.PalabrasClaveIds)
-            {
-                var palabraClave = await _context.PalabrasClaves.FindAsync(palabraClaveId);
-                if (palabraClave != null)
-                {
-                    _context.DocumentoPalabrasClaves.Add(new DocumentoPalabraClave
-                    {
-                        DocumentoId = documento.Id,
-                        PalabraClaveId = palabraClaveId
-                    });
-                }
-            }
+            _context.Documentos.Add(documento);
             await _context.SaveChangesAsync();
+
+            // El trigger de la BD generará el IdDocumento automáticamente
+            // Recargar el documento para obtener el IdDocumento generado
+            await _context.Entry(documento).ReloadAsync();
+
+            // Agregar palabras clave si se proporcionan
+            if (dto.PalabrasClaveIds != null && dto.PalabrasClaveIds.Any())
+            {
+                foreach (var palabraClaveId in dto.PalabrasClaveIds)
+                {
+                    var palabraClave = await _context.PalabrasClaves.FindAsync(palabraClaveId);
+                    if (palabraClave != null)
+                    {
+                        _context.DocumentoPalabrasClaves.Add(new DocumentoPalabraClave
+                        {
+                            DocumentoId = documento.Id,
+                            PalabraClaveId = palabraClaveId
+                        });
+                    }
+                }
+                await _context.SaveChangesAsync();
+            }
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Error al crear documento con código {Codigo}", codigo);
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+
+            if (innerMessage.Contains("codigo_formato", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { message = "Formato de código inválido. Debe ser TIPO-AREA-GESTION-#### con número correlativo numérico." });
+            }
+
+            if (innerMessage.Contains("documentos_codigo_key", StringComparison.OrdinalIgnoreCase) ||
+                innerMessage.Contains("duplicate key", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { message = "Ya existe un documento con ese código. Ajuste el número correlativo." });
+            }
+
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "No se pudo guardar el documento en la base de datos." });
         }
 
         // TODO: Registrar en auditoría
