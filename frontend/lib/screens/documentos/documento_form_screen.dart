@@ -7,6 +7,7 @@ import '../../models/documento.dart';
 import '../../services/carpeta_service.dart';
 import '../../services/documento_service.dart';
 import '../../services/usuario_service.dart';
+import '../../services/catalogo_service.dart';
 import '../../models/usuario.dart';
 
 class DocumentoFormScreen extends StatefulWidget {
@@ -38,22 +39,8 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
 
   // Listas para dropdowns (simuladas por ahora, idealmente cargar de servicios)
   // En una app real, cargaríamos TiposDocumento y Areas de sus servicios
-  final List<Map<String, dynamic>> _tiposDocumento = [
-    {'id': 1, 'nombre': 'Informe'},
-    {'id': 2, 'nombre': 'Memorándum'},
-    {'id': 3, 'nombre': 'Nota Interna'},
-    {'id': 4, 'nombre': 'Carta'},
-    {'id': 5, 'nombre': 'Resolución'},
-  ];
-
-  final List<Map<String, dynamic>> _areas = [
-     {'id': 1, 'nombre': 'Administración'},
-     {'id': 2, 'nombre': 'Contabilidad'},
-     {'id': 3, 'nombre': 'Recursos Humanos'},
-     {'id': 4, 'nombre': 'Legal'},
-     {'id': 5, 'nombre': 'Sistemas'},
-  ];
-
+  List<Map<String, dynamic>> _tiposDocumento = [];
+  List<Map<String, dynamic>> _areas = [];
   List<Usuario> _usuarios = [];
   List<Carpeta> _carpetas = [];
 
@@ -82,25 +69,29 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
   }
 
   Future<void> _loadData() async {
-    // Cargar usuarios y carpetas
+    // Cargar usuarios, carpetas, áreas y tipos
     try {
       final usuarioService = Provider.of<UsuarioService>(context, listen: false);
       final carpetaService = Provider.of<CarpetaService>(context, listen: false);
+      final catalogoService = Provider.of<CatalogoService>(context, listen: false);
       
       final usuariosFuture = usuarioService.getAll();
       final carpetasFuture = carpetaService.getAll(gestion: _gestionController.text.isNotEmpty ? _gestionController.text : DateTime.now().year.toString());
+      final areasFuture = catalogoService.getAreas();
+      final tiposFuture = catalogoService.getTiposDocumento();
 
-      final results = await Future.wait([usuariosFuture, carpetasFuture]);
+      final results = await Future.wait([usuariosFuture, carpetasFuture, areasFuture, tiposFuture]);
       
       if (mounted) {
         setState(() {
           _usuarios = results[0] as List<Usuario>;
           _carpetas = results[1] as List<Carpeta>;
+          _areas = results[2] as List<Map<String, dynamic>>;
+          _tiposDocumento = results[3] as List<Map<String, dynamic>>;
         });
       }
     } catch (e) {
       print('Error cargando datos auxiliares: $e');
-      // No bloqueamos, cargaremos listas vacías
     }
   }
 
@@ -209,22 +200,25 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                   Row(
                     children: [
                       Expanded(
+                        flex: 3,
                         child: DropdownButtonFormField<int>(
                           value: _tipoDocumentoId,
-                          decoration: _inputDecoration('Tipo de Documento'),
+                          isExpanded: true,
+                          decoration: _inputDecoration('Tipo'),
                           items: _tiposDocumento.map((t) => DropdownMenuItem<int>(
                             value: t['id'],
-                            child: Text(t['nombre']),
+                            child: Text(t['nombre'], overflow: TextOverflow.ellipsis),
                           )).toList(),
                           onChanged: (v) => setState(() => _tipoDocumentoId = v),
                           validator: (v) => v == null ? 'Requerido' : null,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
+                        flex: 2,
                         child: TextFormField(
                           controller: _numeroCorrelativoController,
-                          decoration: _inputDecoration('N° Correlativo'),
+                          decoration: _inputDecoration('N° Corr.'),
                           keyboardType: TextInputType.number,
                           validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
                         ),
@@ -236,22 +230,25 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                   Row(
                     children: [
                       Expanded(
+                        flex: 3,
                         child: DropdownButtonFormField<int>(
                           value: _areaOrigenId,
-                          decoration: _inputDecoration('Área de Origen'),
+                          isExpanded: true,
+                          decoration: _inputDecoration('Área Origen'),
                           items: _areas.map((t) => DropdownMenuItem<int>(
                             value: t['id'],
-                            child: Text(t['nombre']),
+                            child: Text(t['nombre'], overflow: TextOverflow.ellipsis),
                           )).toList(),
                           onChanged: (v) => setState(() => _areaOrigenId = v),
                           validator: (v) => v == null ? 'Requerido' : null,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
+                        flex: 2,
                         child: TextFormField(
                           controller: _gestionController,
-                          decoration: _inputDecoration('Gestión (Año)'),
+                          decoration: _inputDecoration('Gestión'),
                           keyboardType: TextInputType.number,
                           maxLength: 4,
                           validator: (v) => v!.length != 4 ? 'Inválido' : null,

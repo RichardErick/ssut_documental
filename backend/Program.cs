@@ -200,8 +200,42 @@ using (var scope = app.Services.CreateScope())
         if (db.Database.CanConnect())
         {
             logger.LogInformation("Conexión a la base de datos exitosa");
-            // Si la base de datos ya existe, no intentamos crearla
-            // Usa migraciones para actualizar el esquema si es necesario
+            
+            // Fix temporal para migrar la columna estado de enum a text si es necesario
+            // Esto evita errores de "datatype mismatch" en PostgreSQL
+            try {
+                const string fixSql = @"
+DO $$ 
+BEGIN 
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'documentos' AND column_name = 'estado' 
+        AND data_type = 'USER-DEFINED'
+    ) THEN 
+        ALTER TABLE documentos ALTER COLUMN estado TYPE VARCHAR(50) USING estado::text;
+        RAISE NOTICE 'Columna estado convertida a VARCHAR';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'movimientos' AND column_name = 'tipo_movimiento' 
+        AND data_type = 'USER-DEFINED'
+    ) THEN 
+        ALTER TABLE movimientos ALTER COLUMN tipo_movimiento TYPE VARCHAR(50) USING tipo_movimiento::text;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'movimientos' AND column_name = 'estado' 
+        AND data_type = 'USER-DEFINED'
+    ) THEN 
+        ALTER TABLE movimientos ALTER COLUMN estado TYPE VARCHAR(50) USING estado::text;
+    END IF;
+END $$;";
+                db.Database.ExecuteSqlRaw(fixSql);
+            } catch (Exception ex) {
+                logger.LogWarning("No se pudo ejecutar el script de corrección de tipos: {Message}", ex.Message);
+            }
         }
         //aqui no deberia entrar nunca
         else
