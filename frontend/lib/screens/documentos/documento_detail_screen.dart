@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../models/documento.dart';
 import '../../models/movimiento.dart';
+import '../../services/documento_service.dart';
 import '../../services/movimiento_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/error_helper.dart';
@@ -24,10 +25,15 @@ class DocumentoDetailScreen extends StatefulWidget {
 class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
   List<Movimiento> _movimientos = [];
   bool _isLoadingMovimientos = true;
+  String? _qrData;
+  bool _isGeneratingQr = false;
 
   @override
   void initState() {
     super.initState();
+    _qrData = _normalizeQrData(
+      widget.documento.urlQR ?? widget.documento.codigoQR,
+    );
     _loadMovimientos();
   }
 
@@ -45,6 +51,35 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingMovimientos = false);
+    }
+  }
+
+  String? _normalizeQrData(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _generateQr() async {
+    if (_isGeneratingQr) return;
+    setState(() => _isGeneratingQr = true);
+    try {
+      final service = Provider.of<DocumentoService>(context, listen: false);
+      final response = await service.generarQR(widget.documento.id);
+      final qrContent =
+          response['qrContent'] ??
+          response['QrContent'] ??
+          widget.documento.urlQR ??
+          widget.documento.codigoQR;
+      if (mounted) {
+        setState(() => _qrData = _normalizeQrData(qrContent?.toString()));
+      }
+    } catch (e) {
+      ErrorHelper.showError(context, 'No se pudo generar el código QR');
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingQr = false);
+      }
     }
   }
 
@@ -323,7 +358,10 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
             ),
           ),
           const SizedBox(width: 24),
-          if (doc.codigoQR != null) _buildQRCode(doc.codigoQR!, theme),
+          if (_qrData != null)
+            _buildQRCode(_qrData!, theme)
+          else
+            _buildQrPlaceholder(theme),
         ],
       ),
     );
@@ -355,6 +393,46 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQrPlaceholder(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.qr_code_rounded,
+            size: 48,
+            color: theme.colorScheme.primary.withOpacity(0.6),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'QR no disponible',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 32,
+            child: ElevatedButton(
+              onPressed: _isGeneratingQr ? null : _generateQr,
+              child: Text(
+                _isGeneratingQr ? 'Generando...' : 'Generar QR',
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
             ),
           ),
         ],

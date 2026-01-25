@@ -294,7 +294,7 @@ public class DocumentosController : ControllerBase
             documento.IdDocumento = documento.Codigo; 
             var qrContent = $"{baseUrl}/documentos/ver/{documento.IdDocumento}";
             documento.UrlQR = qrContent;
-            documento.CodigoQR = _qrService.GenerarQRBase64(qrContent);
+            documento.CodigoQR = qrContent;
         }
         catch (Exception qrEx)
         {
@@ -337,7 +337,7 @@ public class DocumentosController : ControllerBase
                     var baseUrl = _configuration["FrontendUrl"] ?? "http://localhost:5286";
                     var qrContent = $"{baseUrl}/documentos/ver/{idDoc}";
                     documentoCompleto.UrlQR = qrContent;
-                    documentoCompleto.CodigoQR = _qrService.GenerarQRBase64(qrContent);
+                    documentoCompleto.CodigoQR = qrContent;
                     documentoCompleto.FechaActualizacion = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                 }
@@ -783,9 +783,9 @@ public class DocumentosController : ControllerBase
         // Generar imagen base64
         var qrBase64 = _qrService.GenerarQRBase64(qrContent);
         
-        // Guardar la URL (contenido) y el código QR (base64) si lo deseamos guardar en BD o devolverlo
+        // Guardar el contenido del QR (URL) y devolver la imagen base64 si se requiere
         documento.UrlQR = qrContent;
-        documento.CodigoQR = qrBase64; // Guardamos el base64 directamente o una referencia
+        documento.CodigoQR = qrContent;
         documento.FechaActualizacion = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
