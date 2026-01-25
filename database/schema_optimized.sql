@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS documentos (
     fecha_documento DATE NOT NULL,
     descripcion TEXT,
     responsable_id INTEGER REFERENCES usuarios(id),
-    codigo_qr VARCHAR(255),
+    codigo_qr TEXT,
     ubicacion_fisica VARCHAR(200),
     estado estado_documento_enum DEFAULT 'Activo',
     nivel_confidencialidad INTEGER DEFAULT 1 CHECK (nivel_confidencialidad BETWEEN 1 AND 5),

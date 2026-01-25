@@ -84,6 +84,8 @@ ALTER TABLE documentos ADD CONSTRAINT gestion_formato CHECK (gestion ~* '^[0-9]{
 ALTER TABLE documentos DROP CONSTRAINT IF EXISTS codigo_formato;
 ALTER TABLE documentos ADD CONSTRAINT codigo_formato CHECK (codigo ~* '^[A-Z0-9]{2,10}-[A-Z0-9]{2,10}-[0-9]{4}-[0-9]{4,6}$');
 ALTER TABLE documentos ADD CONSTRAINT nivel_confidencialidad_rango CHECK (nivel_confidencialidad BETWEEN 1 AND 5);
+-- Ampliar almacenamiento QR a texto
+ALTER TABLE documentos ALTER COLUMN codigo_qr TYPE text;
 
 -- Tabla movimientos
 ALTER TABLE movimientos ADD COLUMN IF NOT EXISTS uuid UUID DEFAULT uuid_generate_v4() UNIQUE;
