@@ -252,6 +252,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.documento != null;
+    final ocultarSelectorCarpeta = !isEditing && widget.initialCarpetaId != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -359,52 +360,54 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                     maxLines: 3,
                     validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
                   ),
-                  if (_carpetas.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: _crearNuevaCarpeta,
-                          icon: const Icon(Icons.create_new_folder),
-                          label: const Text('Crear carpeta'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.amber.shade800,
-                            foregroundColor: Colors.white,
-                            textStyle: const TextStyle(fontWeight: FontWeight.w600),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  if (!ocultarSelectorCarpeta) ...[
+                    if (_carpetas.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: _crearNuevaCarpeta,
+                            icon: const Icon(Icons.create_new_folder),
+                            label: const Text('Crear carpeta'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber.shade800,
+                              foregroundColor: Colors.white,
+                              textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          value: _carpetaId,
-                          decoration: _inputDecoration('Carpeta de Archivo'),
-                          isExpanded: true,
-                          items: [
-                            const DropdownMenuItem<int>(value: null, child: Text('Sin carpeta asignada')),
-                            ..._carpetas.map((c) => DropdownMenuItem<int>(
-                              value: c.id,
-                              child: Text('${c.nombre} (${c.codigo ?? "-"})'),
-                            )),
-                          ],
-                          onChanged: (v) => setState(() => _carpetaId = v),
+                      )
+                    else
+                      Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _carpetaId,
+                            decoration: _inputDecoration('Carpeta de Archivo'),
+                            isExpanded: true,
+                            items: [
+                              const DropdownMenuItem<int>(value: null, child: Text('Sin carpeta asignada')),
+                              ..._carpetas.map((c) => DropdownMenuItem<int>(
+                                value: c.id,
+                                child: Text('${c.nombre} (${c.codigo ?? "-"})'),
+                              )),
+                            ],
+                            onChanged: (v) => setState(() => _carpetaId = v),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: _crearNuevaCarpeta,
-                        icon: const Icon(Icons.create_new_folder, color: Colors.blue),
-                        tooltip: 'Nueva Carpeta',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: _crearNuevaCarpeta,
+                          icon: const Icon(Icons.create_new_folder, color: Colors.blue),
+                          tooltip: 'Nueva Carpeta',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   Row(
                     children: [

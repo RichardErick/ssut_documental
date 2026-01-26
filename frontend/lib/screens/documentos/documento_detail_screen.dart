@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -8,9 +9,7 @@ import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../models/documento.dart';
-import '../../models/movimiento.dart';
 import '../../services/documento_service.dart';
-import '../../services/movimiento_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/animated_card.dart';
@@ -26,8 +25,6 @@ class DocumentoDetailScreen extends StatefulWidget {
 }
 
 class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
-  List<Movimiento> _movimientos = [];
-  bool _isLoadingMovimientos = true;
   String? _qrData;
   bool _isGeneratingQr = false;
 
@@ -37,7 +34,6 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     _qrData = _normalizeQrData(
       widget.documento.urlQR ?? widget.documento.codigoQR,
     );
-    _loadMovimientos();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _qrData == null) {
         _generateQr();
@@ -45,22 +41,6 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     });
   }
 
-  Future<void> _loadMovimientos() async {
-    if (!mounted) return;
-    setState(() => _isLoadingMovimientos = true);
-    try {
-      final service = Provider.of<MovimientoService>(context, listen: false);
-      final movimientos = await service.getByDocumentoId(widget.documento.id);
-      if (mounted) {
-        setState(() {
-          _movimientos = movimientos;
-          _isLoadingMovimientos = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingMovimientos = false);
-    }
-  }
 
   String? _normalizeQrData(String? value) {
     if (value == null) return null;
@@ -392,11 +372,11 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                   ),
                 ),
                 pw.SizedBox(height: 6),
-                _buildPdfRow('Codigo', doc.codigo),
+                _buildPdfRow('Código', doc.codigo),
                 _buildPdfRow('Correlativo', doc.numeroCorrelativo),
                 _buildPdfRow('Tipo', doc.tipoDocumentoNombre ?? 'N/A'),
-                _buildPdfRow('Area origen', doc.areaOrigenNombre ?? 'N/A'),
-                _buildPdfRow('Gestion', doc.gestion),
+                _buildPdfRow('Área origen', doc.areaOrigenNombre ?? 'N/A'),
+                _buildPdfRow('Gestión', doc.gestion),
                 _buildPdfRow(
                   'Fecha documento',
                   dateFormat.format(doc.fechaDocumento),
@@ -416,7 +396,7 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                 _buildPdfRow('Estado', doc.estado),
                 _buildPdfRow(
                   'Descripcion',
-                  doc.descripcion ?? 'Sin descripcion',
+                  doc.descripcion ?? 'Sin descripción',
                 ),
                 pw.SizedBox(height: 16),
                 pw.Container(
@@ -700,169 +680,197 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     );
   }
 
+
+
   Widget _buildRightColumn(DateFormat dateFormat, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'HISTORIAL DE MOVIMIENTOS',
+          'PREVISUALIZACIÓN DEL DOCUMENTO',
           style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        _isLoadingMovimientos
-            ? _buildMovShimmer()
-            : _movimientos.isEmpty
-            ? _buildEmptyMovs()
-            : Column(
-              children:
-                  _movimientos
-                      .map((m) => _buildMovItem(m, dateFormat, theme))
-                      .toList(),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.withOpacity(0.15)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14),
+            ],
+          ),
+          child: SizedBox(
+            height: 520,
+            child: PdfPreview(
+              build: (format) => _buildPdfBytes(),
+              allowPrinting: true,
+              allowSharing: true,
+              canChangeOrientation: false,
+              canChangePageFormat: false,
+              canDebug: false,
             ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildMovShimmer() {
-    return Column(
-      children: List.generate(
-        3,
-        (i) => LoadingShimmer(
-          width: double.infinity,
-          height: 100,
-          borderRadius: BorderRadius.circular(20),
-        ),
+  Future<Uint8List> _buildPdfBytes() async {
+    String? qrData = _normalizeQrData(
+      _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
+    );
+    if (qrData == null) {
+      await _generateQr();
+      qrData = _normalizeQrData(
+        _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
+      );
+    }
+    final qrDataSafe =
+        (qrData != null && qrData.isNotEmpty) ? qrData : widget.documento.codigo;
+
+    final doc = widget.documento;
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build:
+            (context) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                  ),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Expanded(
+                        flex: 3,
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Comprobante de Documento',
+                              style: pw.TextStyle(
+                                fontSize: 18,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.Text(
+                              'Correspondiente al ${dateFormat.format(doc.fechaDocumento)}',
+                              style: pw.TextStyle(
+                                fontSize: 10,
+                                color: PdfColors.grey700,
+                              ),
+                            ),
+                            pw.SizedBox(height: 6),
+                            _buildPdfRow('Área', doc.areaOrigenNombre ?? 'N/A'),
+                            _buildPdfRow('Tipo', doc.tipoDocumentoNombre ?? 'N/A'),
+                            _buildPdfRow('Gestión', doc.gestion),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(width: 8),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(8),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                        ),
+                        child: pw.Column(
+                          children: [
+                            pw.Text('N°', style: pw.TextStyle(fontSize: 10)),
+                            pw.Text(
+                              doc.numeroCorrelativo,
+                              style: pw.TextStyle(
+                                fontSize: 16,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.SizedBox(height: 6),
+                            pw.Text(
+                              'Estado: ${doc.estado}',
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  doc.descripcion ?? 'Detalle no registrado',
+                  style: pw.TextStyle(fontSize: 11),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(8),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                  ),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            _buildPdfRow('Código', doc.codigo),
+                            _buildPdfRow('Correlativo', doc.numeroCorrelativo),
+                            _buildPdfRow('Responsable', doc.responsableNombre ?? 'No asignado'),
+                            _buildPdfRow('Carpeta', doc.carpetaNombre ?? 'Sin carpeta'),
+                            _buildPdfRow('Ubicación', doc.ubicacionFisica ?? 'No registrada'),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(width: 12),
+                      pw.BarcodeWidget(
+                        barcode: pw.Barcode.qrCode(),
+                        data: qrDataSafe,
+                        width: 80,
+                        height: 80,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
       ),
     );
+
+    return pdf.save();
   }
 
-  Widget _buildEmptyMovs() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.history_toggle_off_rounded, size: 48, color: Colors.grey),
-          SizedBox(height: 16),
-          Text('Sin movimientos'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMovItem(Movimiento mov, DateFormat dateFormat, ThemeData theme) {
-    final isOut = mov.tipoMovimiento == 'Salida';
-    final color = isOut ? Colors.red : Colors.green;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
-        ],
-      ),
+  Widget _previewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isOut ? Icons.north_east_rounded : Icons.south_west_rounded,
-              color: color,
-              size: 20,
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mov.tipoMovimiento.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  mov.areaDestinoNombre ?? mov.areaOrigenNombre ?? 'Sin área',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  dateFormat.format(mov.fechaMovimiento),
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
-          if (mov.estado == 'Activo' && isOut)
-            TextButton(
-              onPressed: () => _handleReturn(mov.id),
-              child: Text(
-                'DEVOLVER',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  Future<void> _handleReturn(int movId) async {
-    try {
-      await Provider.of<MovimientoService>(
-        context,
-        listen: false,
-      ).devolverDocumento(movId);
-      _loadMovimientos();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Documento devuelto exitosamente'),
-            backgroundColor: AppTheme.colorExito,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    ErrorHelper.getErrorMessage(e),
-                    style: const TextStyle(fontSize: 14),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppTheme.colorError,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
 
   Color _getStatusColor(String estado) {
     switch (estado.toLowerCase()) {

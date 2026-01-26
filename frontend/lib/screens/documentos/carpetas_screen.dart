@@ -29,7 +29,14 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
     try {
       final carpetaService = Provider.of<CarpetaService>(context, listen: false);
       final carpetas = await carpetaService.getArbol(_gestion);
-      setState(() => _carpetas = carpetas);
+      final ordered = [...carpetas]
+        ..sort((a, b) {
+          final aIsMain = a.nombre == _nombreCarpetaPermitida;
+          final bIsMain = b.nombre == _nombreCarpetaPermitida;
+          if (aIsMain == bIsMain) return a.id.compareTo(b.id);
+          return aIsMain ? -1 : 1;
+        });
+      setState(() => _carpetas = ordered);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -54,7 +61,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
       return;
     }
     final nombreController = TextEditingController(text: _nombreCarpetaPermitida);
-    final codigoController = TextEditingController();
+    final numeroController = TextEditingController(text: _nextNumeroCarpeta().toString());
     final descripcionController = TextEditingController();
 
     await showDialog(
@@ -71,8 +78,15 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
             ),
             const SizedBox(height: 8),
             TextField(
-              controller: codigoController,
-              decoration: const InputDecoration(labelText: 'Codigo (Opcional)'),
+              readOnly: true,
+              controller: TextEditingController(text: _gestion),
+              decoration: const InputDecoration(labelText: 'Gesti??n'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              readOnly: true,
+              controller: numeroController,
+              decoration: const InputDecoration(labelText: 'N??mero Correlativo'),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -90,7 +104,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
                 final carpetaService = Provider.of<CarpetaService>(context, listen: false);
                 await carpetaService.create(CreateCarpetaDTO(
                   nombre: nombreController.text,
-                  codigo: codigoController.text.isEmpty ? null : codigoController.text,
+                  codigo: null,
                   gestion: _gestion,
                   descripcion: descripcionController.text,
                   carpetaPadreId: padreId,
@@ -115,7 +129,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
     final hasCarpetas = _carpetas.isNotEmpty;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Gestion de Carpetas $_gestion', style: GoogleFonts.poppins()),
+        title: Text('Carpetas', style: GoogleFonts.poppins()),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -191,6 +205,71 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
     );
   }
 
+  Widget _buildCarpetaSubtitle(Carpeta carpeta) {
+    final gestionLine =
+        carpeta.gestion.isNotEmpty ? 'Gestion ${carpeta.gestion}' : null;
+    final nroLine =
+        carpeta.numeroCarpeta != null ? 'Nro ${carpeta.numeroCarpeta}' : null;
+    final romano = (carpeta.codigoRomano ?? '').isNotEmpty
+        ? carpeta.codigoRomano
+        : carpeta.codigo;
+    final romanoLine = (romano ?? '').isNotEmpty ? 'Romano $romano' : null;
+    final rango = _formatRango(carpeta);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (gestionLine != null) Text(gestionLine),
+        if (nroLine != null) Text(nroLine),
+        if (romanoLine != null) Text(romanoLine),
+        const SizedBox(height: 4),
+        Text('Documentos: ${carpeta.numeroDocumentos} - Rango: $rango'),
+      ],
+    );
+  }
+
+  Future<void> _confirmarEliminarCarpeta(Carpeta carpeta) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar carpeta'),
+        content: Text(
+          'Se eliminara la carpeta "${carpeta.nombre}". No se puede eliminar si tiene documentos o subcarpetas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _eliminarCarpeta(carpeta);
+    }
+  }
+
+  Future<void> _eliminarCarpeta(Carpeta carpeta) async {
+    try {
+      final carpetaService = Provider.of<CarpetaService>(context, listen: false);
+      await carpetaService.delete(carpeta.id, hard: false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Carpeta eliminada')));
+      _loadCarpetas();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No se pudo eliminar: $e')));
+    }
+  }
+
   Widget _buildCarpetaItem(Carpeta carpeta) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -202,14 +281,14 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
           child: Icon(Icons.folder_rounded, color: Colors.amber.shade800, size: 26),
         ),
         title: Text(carpeta.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${carpeta.codigo ?? "S/C"} • ${carpeta.numeroDocumentos} documentos'),
+        subtitle: _buildCarpetaSubtitle(carpeta),
         children: [
           if (carpeta.subcarpetas.isNotEmpty)
             ...carpeta.subcarpetas.map((sub) => ListTile(
                   contentPadding: const EdgeInsets.only(left: 32, right: 16),
                   leading: Icon(Icons.folder_open_rounded, color: Colors.amber.shade400),
                   title: Text(sub.nombre),
-                  subtitle: Text('${sub.codigo ?? ""} • ${sub.numeroDocumentos} docs'),
+                  subtitle: Text('Romano ${sub.codigo ?? "S/C"} - ${sub.numeroDocumentos} docs'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     // TODO: Navegar a detalles de carpeta o lista de documentos filtrada
@@ -220,17 +299,20 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton.icon(
-                  onPressed: () => _crearCarpeta(padreId: carpeta.id),
-                  icon: const Icon(Icons.add_box_outlined, size: 20),
-                  label: const Text('Subcarpeta'),
-                  style: TextButton.styleFrom(foregroundColor: Colors.amber.shade900),
+                OutlinedButton.icon(
+                  onPressed: () => _confirmarEliminarCarpeta(carpeta),
+                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                  label: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () => _agregarDocumentoACarpeta(carpeta),
                   icon: const Icon(Icons.note_add_rounded, size: 20, color: Colors.white),
-                  label: const Text('Agregar Documento', style: TextStyle(color: Colors.white)),
+                  label: const Text('Agregar carpeta', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -242,6 +324,24 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
         ],
       ),
     );
+  }
+
+  int _nextNumeroCarpeta() {
+    if (_carpetas.isEmpty) return 1;
+    final numeros = _carpetas
+        .map((c) => c.numeroCarpeta)
+        .whereType<int>()
+        .toList();
+    if (numeros.isEmpty) return _carpetas.length + 1;
+    numeros.sort();
+    return numeros.last + 1;
+  }
+
+  String _formatRango(Carpeta carpeta) {
+    if (carpeta.rangoInicio == null || carpeta.rangoFin == null) {
+      return 'sin documentos';
+    }
+    return '${carpeta.rangoInicio} - ${carpeta.rangoFin}';
   }
 
   void _agregarDocumentoACarpeta(Carpeta carpeta) async {

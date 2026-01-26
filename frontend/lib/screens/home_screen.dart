@@ -17,6 +17,7 @@ import 'movimientos/movimientos_screen.dart';
 import 'notifications_screen.dart';
 import 'qr/qr_scanner_screen.dart';
 import 'reportes/reportes_screen.dart';
+import 'profile_screen.dart';
 import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -48,9 +49,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     _navItems = [
       NavigationItem(
-        label: 'Documentos',
-        icon: Icons.description_outlined,
-        selectedIcon: Icons.description,
+        label: 'Carpetas',
+        icon: Icons.folder_outlined,
+        selectedIcon: Icons.folder,
         screen: DocumentosListScreen(key: _documentosKey),
       ),
       NavigationItem(
@@ -390,6 +391,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         if (value == 'logout') {
           Provider.of<AuthProvider>(context, listen: false).logout();
           Navigator.of(context).pushReplacementNamed('/login');
+        } else if (value == 'profile') {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+          );
         }
       },
       itemBuilder:
