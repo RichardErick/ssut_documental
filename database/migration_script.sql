@@ -76,7 +76,7 @@ ALTER TABLE documentos ADD COLUMN IF NOT EXISTS estado estado_documento_enum DEF
 UPDATE documentos SET estado = 'Activo' WHERE estado::text = 'Activo';
 UPDATE documentos SET estado = 'Inactivo' WHERE estado::text != 'Activo';
 
--- Establecer area_actual_id igual a area_origen_id si es NULL
+-- Establecer area_actual_id igual a area_origen_- ooid si es NULL
 UPDATE documentos SET area_actual_id = area_origen_id WHERE area_actual_id IS NULL;
 
 -- Agregar constraints
@@ -156,6 +156,23 @@ CREATE TABLE IF NOT EXISTS alertas (
     documento_id INTEGER REFERENCES documentos(id),
     movimiento_id INTEGER REFERENCES movimientos(id)
 );
+
+-- Tabla palabras_clave (ajustes de columnas usadas por el backend)
+DO $$
+BEGIN
+    IF to_regclass('public.palabras_clave') IS NOT NULL THEN
+        ALTER TABLE palabras_clave ADD COLUMN IF NOT EXISTS descripcion TEXT;
+        ALTER TABLE palabras_clave ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
+    END IF;
+END $$;
+
+-- Tabla usuario_permisos (columna denegado usada por el backend)
+DO $$
+BEGIN
+    IF to_regclass('public.usuario_permisos') IS NOT NULL THEN
+        ALTER TABLE usuario_permisos ADD COLUMN IF NOT EXISTS denegado BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
 
 -- 5. Crear índices nuevos y optimizados
 
@@ -369,24 +386,6 @@ ON CONFLICT (clave) DO NOTHING;
 
 -- 9. Actualizar estadísticas de la base de datos
 ANALYZE;
-
--- 10. Asegurar QR y IdDocumento para registros existentes
-DO $$
-DECLARE
-    v_base_url TEXT := 'http://localhost:5286';
-BEGIN
-    -- Rellenar IdDocumento si está vacío
-    UPDATE documentos
-    SET id_documento = COALESCE(NULLIF(id_documento, ''), codigo)
-    WHERE id_documento IS NULL OR id_documento = '';
-
-    -- Completar url_qr y codigo_qr faltantes
-    UPDATE documentos
-    SET url_qr = CONCAT(v_base_url, '/documentos/ver/', id_documento),
-        codigo_qr = CONCAT(v_base_url, '/documentos/ver/', id_documento)
-    WHERE (url_qr IS NULL OR url_qr = '')
-       OR (codigo_qr IS NULL OR codigo_qr = '');
-END $$;
 
 COMMIT;
 

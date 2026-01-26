@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/carpeta.dart';
 import '../../models/documento.dart';
@@ -12,15 +13,18 @@ import '../../models/usuario.dart';
 
 class DocumentoFormScreen extends StatefulWidget {
   final Documento? documento;
+  final int? initialCarpetaId;
 
-  const DocumentoFormScreen({super.key, this.documento});
+  const DocumentoFormScreen({super.key, this.documento, this.initialCarpetaId});
 
   @override
   State<DocumentoFormScreen> createState() => _DocumentoFormScreenState();
 }
 
 class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
+  static const String _nombreCarpetaPermitida = 'Comprobante de Egreso';
   final _formKey = GlobalKey<FormState>();
+  AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
   bool _isLoading = false;
   
   // Controladores
@@ -52,6 +56,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
       _initFormData(widget.documento!);
     } else {
       _gestionController.text = DateTime.now().year.toString();
+      _carpetaId = widget.initialCarpetaId;
     }
   }
 
@@ -88,6 +93,14 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
           _carpetas = results[1] as List<Carpeta>;
           _areas = results[2] as List<Map<String, dynamic>>;
           _tiposDocumento = results[3] as List<Map<String, dynamic>>;
+          if (_tipoDocumentoId != null &&
+              !_tiposDocumento.any((t) => t['id'] == _tipoDocumentoId)) {
+            _tipoDocumentoId = null;
+          }
+          if (_areaOrigenId != null &&
+              !_areas.any((a) => a['id'] == _areaOrigenId)) {
+            _areaOrigenId = null;
+          }
         });
       }
     } catch (e) {
@@ -115,7 +128,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
     
     // Validaciones extra dropdowns
     if (_tipoDocumentoId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seleccione un tipo de documento')));
+      _showSnack('Seleccione un tipo de documento', background: Colors.orange);
       return;
     }
     if (_areaOrigenId == null) {
@@ -144,7 +157,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
         );
         await documentoService.create(dto);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Documento registrado exitosamente'), backgroundColor: Colors.green));
+          _showSnack('Documento creado con exito', background: Colors.green);
           Navigator.pop(context, true);
         }
       } else {
@@ -163,16 +176,76 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
         );
         await documentoService.update(widget.documento!.id, dto);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Documento actualizado exitosamente'), backgroundColor: Colors.green));
+          _showSnack('Documento actualizado con exito', background: Colors.green);
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red));
+        _showSnack('Error al guardar: $e', background: Colors.red);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _crearNuevaCarpeta() async {
+    if (_carpetas.any((c) => c.nombre == _nombreCarpetaPermitida)) {
+      _showSnack('La carpeta Comprobante de Egreso ya existe', background: Colors.orange);
+      return;
+    }
+    final nombreController = TextEditingController(text: _nombreCarpetaPermitida);
+    final codigoController = TextEditingController();
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nueva Carpeta'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nombreController,
+              decoration: const InputDecoration(labelText: 'Nombre *'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: codigoController,
+              decoration: const InputDecoration(labelText: 'Código (Opcional)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nombreController.text.isEmpty) return;
+              try {
+                final carpetaService = Provider.of<CarpetaService>(context, listen: false);
+                final nuevaCarpeta = await carpetaService.create(CreateCarpetaDTO(
+                  nombre: nombreController.text,
+                  codigo: codigoController.text.isEmpty ? null : codigoController.text,
+                  gestion: _gestionController.text,
+                  descripcion: '',
+                ));
+                if (context.mounted) {
+                  Navigator.pop(context, true);
+                  _showSnack('Carpeta creada', background: Colors.green);
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
+              }
+            },
+            child: const Text('Crear'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await _loadData(); // Recargar carpetas
     }
   }
 
@@ -191,6 +264,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
             padding: const EdgeInsets.all(16),
             child: Form(
               key: _formKey,
+              autovalidateMode: _autoValidateMode,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -285,20 +359,50 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                     maxLines: 3,
                     validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
                   ),
-                  const SizedBox(height: 16),
-                  
-                  DropdownButtonFormField<int>(
-                    value: _carpetaId,
-                    decoration: _inputDecoration('Carpeta de Archivo'),
-                    isExpanded: true,
-                    items: [
-                      const DropdownMenuItem<int>(value: null, child: Text('Sin carpeta asignada')),
-                      ..._carpetas.map((c) => DropdownMenuItem<int>(
-                        value: c.id,
-                        child: Text('${c.nombre} (${c.codigo ?? "-"})'),
-                      )),
+                  if (_carpetas.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: _crearNuevaCarpeta,
+                          icon: const Icon(Icons.create_new_folder),
+                          label: const Text('Crear carpeta'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade800,
+                            foregroundColor: Colors.white,
+                            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: _carpetaId,
+                          decoration: _inputDecoration('Carpeta de Archivo'),
+                          isExpanded: true,
+                          items: [
+                            const DropdownMenuItem<int>(value: null, child: Text('Sin carpeta asignada')),
+                            ..._carpetas.map((c) => DropdownMenuItem<int>(
+                              value: c.id,
+                              child: Text('${c.nombre} (${c.codigo ?? "-"})'),
+                            )),
+                          ],
+                          onChanged: (v) => setState(() => _carpetaId = v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _crearNuevaCarpeta,
+                        icon: const Icon(Icons.create_new_folder, color: Colors.blue),
+                        tooltip: 'Nueva Carpeta',
+                      ),
                     ],
-                    onChanged: (v) => setState(() => _carpetaId = v),
                   ),
                   const SizedBox(height: 16),
 
@@ -362,6 +466,33 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
               ),
             ),
           ),
+    );
+  }
+
+
+  void _showSnack(String message, {Color background = Colors.blue}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: background,
+        behavior: SnackBarBehavior.floating,
+        content: Row(
+          children: [
+            Icon(
+              background == Colors.green
+                  ? Icons.check_circle
+                  : background == Colors.red
+                      ? Icons.error
+                      : background == Colors.orange
+                          ? Icons.warning
+                          : Icons.info,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      ),
     );
   }
 

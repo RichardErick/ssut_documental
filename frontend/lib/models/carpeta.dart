@@ -30,16 +30,19 @@ class Carpeta {
   });
 
   factory Carpeta.fromJson(Map<String, dynamic> json) {
+    final fechaCreacionRaw = json['fechaCreacion'];
     return Carpeta(
       id: json['id'],
       nombre: json['nombre'],
       codigo: json['codigo'],
-      gestion: json['gestion'],
+      gestion: json['gestion']?.toString() ?? '',
       descripcion: json['descripcion'],
       carpetaPadreId: json['carpetaPadreId'],
       carpetaPadreNombre: json['carpetaPadreNombre'],
-      activo: json['activo'],
-      fechaCreacion: DateTime.parse(json['fechaCreacion']),
+      activo: (json['activo'] ?? true) as bool,
+      fechaCreacion: fechaCreacionRaw != null
+          ? DateTime.parse(fechaCreacionRaw.toString())
+          : DateTime.now(),
       usuarioCreacionNombre: json['usuarioCreacionNombre'],
       numeroSubcarpetas: json['numeroSubcarpetas'] ?? 0,
       numeroDocumentos: json['numeroDocumentos'] ?? 0,

@@ -181,8 +181,8 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              // Botón Carpetas
-               Container(
+              // Botón Gestionar Carpetas
+              Container(
                 height: 54,
                 width: 54,
                 decoration: BoxDecoration(
@@ -198,6 +198,22 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                       MaterialPageRoute(builder: (context) => const CarpetasScreen()),
                     );
                   },
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Botón Nueva Carpeta Directa
+              Container(
+                height: 54,
+                width: 54,
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.create_new_folder_rounded, color: Colors.amber.shade900),
+                  tooltip: 'Nueva Carpeta Pública',
+                  onPressed: _abrirNuevaCarpeta,
                 ),
               ),
               const SizedBox(width: 8),
@@ -567,6 +583,15 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     if (result == true) {
       cargarDocumentos();
     }
+  }
+
+  Future<void> _abrirNuevaCarpeta() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CarpetasScreen()),
+    );
+    // Puedes llamar a cargarDocumentos() si las carpetas afectan la lista visible
+    cargarDocumentos();
   }
 
   void _mostrarSnackBarError(String mensaje) {
