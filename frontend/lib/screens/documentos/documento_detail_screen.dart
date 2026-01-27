@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -8,7 +10,9 @@ import 'package:provider/provider.dart';
 import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../models/anexo.dart';
 import '../../models/documento.dart';
+import '../../services/anexo_service.dart';
 import '../../services/documento_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/error_helper.dart';
@@ -27,6 +31,11 @@ class DocumentoDetailScreen extends StatefulWidget {
 class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
   String? _qrData;
   bool _isGeneratingQr = false;
+  List<Anexo> _anexos = [];
+  bool _isLoadingAnexos = false;
+  bool _isUploadingAnexo = false;
+  Uint8List? _previewPdfBytes;
+  String? _previewFileName;
 
   @override
   void initState() {
@@ -39,8 +48,8 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
         _generateQr();
       }
     });
+    _loadAnexos();
   }
-
 
   String? _normalizeQrData(String? value) {
     if (value == null) return null;
@@ -101,17 +110,14 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                       child: _buildLeftColumn(doc, dateFormat, theme),
                     ),
                     const SizedBox(width: 32),
-                    Expanded(
-                      flex: 2,
-                      child: _buildRightColumn(dateFormat, theme),
-                    ),
+                    Expanded(flex: 2, child: _buildRightColumn(theme)),
                   ],
                 )
                 : Column(
                   children: [
                     _buildLeftColumn(doc, dateFormat, theme),
                     const SizedBox(height: 32),
-                    _buildRightColumn(dateFormat, theme),
+                    _buildRightColumn(theme),
                   ],
                 ),
       ),
@@ -166,6 +172,8 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
         _buildMainInfoCard(doc, theme),
         const SizedBox(height: 32),
         _buildGeneralStats(doc, dateFormat, theme),
+        const SizedBox(height: 24),
+        _buildAnexosSection(theme),
       ],
     );
   }
@@ -289,7 +297,9 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       );
     }
     final qrDataSafe =
-        (qrData != null && qrData.isNotEmpty) ? qrData : widget.documento.codigo;
+        (qrData != null && qrData.isNotEmpty)
+            ? qrData
+            : widget.documento.codigo;
 
     final doc = widget.documento;
     final dateFormat = DateFormat('dd/MM/yyyy');
@@ -331,7 +341,10 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                             ),
                             pw.SizedBox(height: 6),
                             _buildPdfRow('Área', doc.areaOrigenNombre ?? 'N/A'),
-                            _buildPdfRow('Tipo', doc.tipoDocumentoNombre ?? 'N/A'),
+                            _buildPdfRow(
+                              'Tipo',
+                              doc.tipoDocumentoNombre ?? 'N/A',
+                            ),
                             _buildPdfRow('Gestión', doc.gestion),
                           ],
                         ),
@@ -340,7 +353,10 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                       pw.Container(
                         padding: const pw.EdgeInsets.all(8),
                         decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                          border: pw.Border.all(
+                            width: 0.6,
+                            color: PdfColors.grey600,
+                          ),
                         ),
                         child: pw.Column(
                           children: [
@@ -385,10 +401,7 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                   'Responsable',
                   doc.responsableNombre ?? 'No asignado',
                 ),
-                _buildPdfRow(
-                  'Carpeta',
-                  doc.carpetaNombre ?? 'Sin carpeta',
-                ),
+                _buildPdfRow('Carpeta', doc.carpetaNombre ?? 'Sin carpeta'),
                 _buildPdfRow(
                   'Ubicacion fisica',
                   doc.ubicacionFisica ?? 'No registrada',
@@ -408,7 +421,10 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                     children: [
                       pw.Container(
                         color: PdfColors.blue100,
-                        padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        padding: const pw.EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 8,
+                        ),
                         child: pw.Row(
                           children: [
                             _pdfHeaderCell('Cuenta', flex: 2),
@@ -419,11 +435,17 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                         ),
                       ),
                       pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        padding: const pw.EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 8,
+                        ),
                         child: pw.Row(
                           children: [
                             _pdfBodyCell('—', flex: 2),
-                            _pdfBodyCell(doc.descripcion ?? 'Detalle no registrado', flex: 4),
+                            _pdfBodyCell(
+                              doc.descripcion ?? 'Detalle no registrado',
+                              flex: 4,
+                            ),
                             _pdfBodyCell('0.00', flex: 2, alignEnd: true),
                             _pdfBodyCell('0.00', flex: 2, alignEnd: true),
                           ],
@@ -448,10 +470,7 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                   height: 120,
                 ),
                 pw.SizedBox(height: 8),
-                pw.Text(
-                  qrDataSafe,
-                  style: const pw.TextStyle(fontSize: 10),
-                ),
+                pw.Text(qrDataSafe, style: const pw.TextStyle(fontSize: 10)),
               ],
             ),
       ),
@@ -542,10 +561,7 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       child: pw.Text(
         text,
         textAlign: alignEnd ? pw.TextAlign.right : pw.TextAlign.left,
-        style: pw.TextStyle(
-          fontSize: 10,
-          fontWeight: pw.FontWeight.bold,
-        ),
+        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
       ),
     );
   }
@@ -680,20 +696,201 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     );
   }
 
+  Widget _buildAnexosSection(ThemeData theme) {
+    return AnimatedCard(
+      delay: const Duration(milliseconds: 300),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Anexos',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _isUploadingAnexo ? null : _pickAndUploadAnexo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon:
+                      _isUploadingAnexo
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Icon(Icons.attach_file_rounded, size: 18),
+                  label: Text(
+                    _isUploadingAnexo ? 'Subiendo...' : 'Subir anexo',
+                    style: GoogleFonts.inter(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_isLoadingAnexos)
+              const Center(child: CircularProgressIndicator())
+            else if (_anexos.isEmpty)
+              Text(
+                'No hay anexos cargados',
+                style: GoogleFonts.inter(color: Colors.grey),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _anexos.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final anexo = _anexos[index];
+                  return InkWell(
+                    onTap: () => _handleAnexoLink(anexo),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.picture_as_pdf_outlined,
+                            color: Colors.black54,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  anexo.nombreArchivo,
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatFileSize(anexo.tamano),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
-
-  Widget _buildRightColumn(DateFormat dateFormat, ThemeData theme) {
+  Widget _buildRightColumn(ThemeData theme) {
+    final hasPreview = _previewPdfBytes != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'PREVISUALIZACIÓN DEL DOCUMENTO',
+          'VISUALIZACIÓN DEL DOCUMENTO',
           style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
+        hasPreview
+            ? _buildPdfPreview(theme)
+            : _buildAttachDocumentPlaceholder(theme),
+      ],
+    );
+  }
+
+  Widget _buildAttachDocumentPlaceholder(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.upload_file_rounded,
+            size: 48,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Adjunta el PDF del comprobante para generar la vista previa',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _isUploadingAnexo ? null : _pickAndUploadAnexo,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child:
+                  _isUploadingAnexo
+                      ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                      : Text(
+                        'Adjuntar PDF',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPdfPreview(ThemeData theme) {
+    return Column(
+      children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          height: 520,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -702,17 +899,40 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
               BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14),
             ],
           ),
-          child: SizedBox(
-            height: 520,
-            child: PdfPreview(
-              build: (format) => _buildPdfBytes(),
-              allowPrinting: true,
-              allowSharing: true,
-              canChangeOrientation: false,
-              canChangePageFormat: false,
-              canDebug: false,
-            ),
+          child: PdfPreview(
+            build: (_) => _previewPdfBytes!,
+            allowPrinting: true,
+            allowSharing: true,
+            canChangeOrientation: false,
+            canChangePageFormat: false,
+            canDebug: false,
           ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _previewFileName ?? 'PDF adjunto',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _isUploadingAnexo ? null : _pickAndUploadAnexo,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(
+                'Reemplazar PDF',
+                style: GoogleFonts.inter(fontSize: 12),
+              ),
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -729,7 +949,9 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       );
     }
     final qrDataSafe =
-        (qrData != null && qrData.isNotEmpty) ? qrData : widget.documento.codigo;
+        (qrData != null && qrData.isNotEmpty)
+            ? qrData
+            : widget.documento.codigo;
 
     final doc = widget.documento;
     final dateFormat = DateFormat('dd/MM/yyyy');
@@ -771,7 +993,10 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                             ),
                             pw.SizedBox(height: 6),
                             _buildPdfRow('Área', doc.areaOrigenNombre ?? 'N/A'),
-                            _buildPdfRow('Tipo', doc.tipoDocumentoNombre ?? 'N/A'),
+                            _buildPdfRow(
+                              'Tipo',
+                              doc.tipoDocumentoNombre ?? 'N/A',
+                            ),
                             _buildPdfRow('Gestión', doc.gestion),
                           ],
                         ),
@@ -780,7 +1005,10 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                       pw.Container(
                         padding: const pw.EdgeInsets.all(8),
                         decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                          border: pw.Border.all(
+                            width: 0.6,
+                            color: PdfColors.grey600,
+                          ),
                         ),
                         child: pw.Column(
                           children: [
@@ -823,9 +1051,18 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                           children: [
                             _buildPdfRow('Código', doc.codigo),
                             _buildPdfRow('Correlativo', doc.numeroCorrelativo),
-                            _buildPdfRow('Responsable', doc.responsableNombre ?? 'No asignado'),
-                            _buildPdfRow('Carpeta', doc.carpetaNombre ?? 'Sin carpeta'),
-                            _buildPdfRow('Ubicación', doc.ubicacionFisica ?? 'No registrada'),
+                            _buildPdfRow(
+                              'Responsable',
+                              doc.responsableNombre ?? 'No asignado',
+                            ),
+                            _buildPdfRow(
+                              'Carpeta',
+                              doc.carpetaNombre ?? 'Sin carpeta',
+                            ),
+                            _buildPdfRow(
+                              'Ubicación',
+                              doc.ubicacionFisica ?? 'No registrada',
+                            ),
                           ],
                         ),
                       ),
@@ -847,30 +1084,109 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     return pdf.save();
   }
 
-  Widget _previewRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
+  Future<void> _loadAnexos() async {
+    setState(() => _isLoadingAnexos = true);
+    try {
+      final service = Provider.of<AnexoService>(context, listen: false);
+      final anexos = await service.listarPorDocumento(widget.documento.id);
+      if (mounted) {
+        setState(() => _anexos = anexos);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showNotification(
+          ErrorHelper.getErrorMessage(e),
+          background: Colors.red.shade600,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingAnexos = false);
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadAnexo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    final file = result?.files.first;
+    if (file == null) return;
+    final pdfBytes = file.bytes;
+    if (pdfBytes == null) {
+      _showNotification(
+        'No se pudo leer el archivo PDF',
+        background: Colors.red.shade600,
+      );
+      return;
+    }
+
+    setState(() => _isUploadingAnexo = true);
+    try {
+      final service = Provider.of<AnexoService>(context, listen: false);
+      final anexo = await service.subirArchivo(widget.documento.id, file);
+      if (mounted) {
+        setState(() {
+          _previewPdfBytes = pdfBytes;
+          _previewFileName = file.name;
+        });
+        _showNotification(
+          'Anexo "${anexo.nombreArchivo}" cargado',
+          background: AppTheme.colorExito,
+        );
+        await _loadAnexos();
+      }
+    } catch (e) {
+      if (mounted) {
+        _showNotification(
+          ErrorHelper.getErrorMessage(e),
+          background: Colors.red.shade600,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAnexo = false);
+      }
+    }
+  }
+
+  void _handleAnexoLink(Anexo anexo) {
+    final url = anexo.urlArchivo;
+    final message =
+        url != null
+            ? 'Descarga disponible: ${url.replaceAll('\\', '/')} '
+            : 'Anexo sin URL disponible';
+    _showNotification(message, background: AppTheme.colorPrimario);
+  }
+
+  String _formatFileSize(int? bytes) {
+    if (bytes == null) return 'Tamaño desconocido';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    double size = bytes.toDouble();
+    var index = 0;
+    while (size >= 1024 && index < units.length - 1) {
+      size /= 1024;
+      index++;
+    }
+    return '${size.toStringAsFixed(size < 10 ? 2 : 1)} ${units[index]}';
+  }
+
+  void _showNotification(
+    String mensaje, {
+    Color background = AppTheme.colorPrimario,
+  }) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje, maxLines: 3, overflow: TextOverflow.ellipsis),
+        backgroundColor: background,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
-
 
   Color _getStatusColor(String estado) {
     switch (estado.toLowerCase()) {
