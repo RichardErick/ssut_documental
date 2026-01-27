@@ -81,11 +81,13 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     }
   }
 
-
   Future<void> _cargarCarpetas() async {
     setState(() => _estaCargandoCarpetas = true);
     try {
-      final carpetaService = Provider.of<CarpetaService>(context, listen: false);
+      final carpetaService = Provider.of<CarpetaService>(
+        context,
+        listen: false,
+      );
       final gestion = DateTime.now().year.toString();
       final carpetas = await carpetaService.getAll(gestion: gestion);
       setState(() {
@@ -159,7 +161,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     return filtrados;
   }
 
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -181,15 +182,15 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         children: [
           _construirFiltrosSuperior(theme, canCreate),
           Expanded(
-            child: _carpetaSeleccionada != null
-                ? _construirVistaDocumentosCarpeta(theme)
-                : _construirVistaCarpetas(theme),
+            child:
+                _carpetaSeleccionada != null
+                    ? _construirVistaDocumentosCarpeta(theme)
+                    : _construirVistaCarpetas(theme),
           ),
         ],
       ),
     );
   }
-
 
   Widget _construirVistaCarpetas(ThemeData theme) {
     if (_estaCargandoCarpetas) {
@@ -223,13 +224,15 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         carpeta.gestion.isNotEmpty ? 'Gestion ${carpeta.gestion}' : null;
     final nroLine =
         carpeta.numeroCarpeta != null ? 'Nro ${carpeta.numeroCarpeta}' : null;
-    final romano = (carpeta.codigoRomano ?? '').isNotEmpty
-        ? carpeta.codigoRomano
-        : carpeta.codigo;
+    final romano =
+        (carpeta.codigoRomano ?? '').isNotEmpty
+            ? carpeta.codigoRomano
+            : carpeta.codigo;
     final romanoLine = (romano ?? '').isNotEmpty ? 'Romano $romano' : null;
-    final rangoLine = (carpeta.rangoInicio != null && carpeta.rangoFin != null)
-        ? 'Rango: ${carpeta.rangoInicio} - ${carpeta.rangoFin}'
-        : 'Rango: sin documentos';
+    final rangoLine =
+        (carpeta.rangoInicio != null && carpeta.rangoFin != null)
+            ? 'Rango: ${carpeta.rangoInicio} - ${carpeta.rangoFin}'
+            : 'Rango: sin documentos';
     return InkWell(
       onTap: () => _abrirCarpeta(carpeta),
       borderRadius: BorderRadius.circular(20),
@@ -263,7 +266,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
             const Spacer(),
             Text(
               carpeta.nombre,
-              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -271,25 +277,40 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
             if (gestionLine != null)
               Text(
                 gestionLine,
-                style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
               ),
             if (nroLine != null)
               Text(
                 nroLine,
-                style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
               ),
             if (romanoLine != null)
               Text(
                 romanoLine,
-                style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
               ),
             Text(
               rangoLine,
-              style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
             Text(
               'Doc: ${carpeta.numeroDocumentos}',
-              style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
           ],
         ),
@@ -301,10 +322,13 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     final carpeta = _carpetaSeleccionada!;
     final docs = _documentosCarpeta;
     final rango =
-        _estaCargandoDocumentosCarpeta ? 'Cargando...' : _calcularRangoCorrelativos(docs);
-    final romano = (carpeta.codigoRomano ?? '').isNotEmpty
-        ? carpeta.codigoRomano
-        : carpeta.codigo;
+        _estaCargandoDocumentosCarpeta
+            ? 'Cargando...'
+            : _calcularRangoCorrelativos(docs);
+    final romano =
+        (carpeta.codigoRomano ?? '').isNotEmpty
+            ? carpeta.codigoRomano
+            : carpeta.codigo;
     final gestionLine =
         carpeta.gestion.isNotEmpty ? 'Gestion ${carpeta.gestion}' : null;
     final nroLine =
@@ -332,66 +356,83 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.folder_open_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.folder_open_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(carpeta.nombre, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text(
+                      carpeta.nombre,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     if (gestionLine != null)
                       Text(
                         gestionLine,
-                        style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
                     if (nroLine != null)
                       Text(
                         nroLine,
-                        style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
                     if (romanoLine != null)
                       Text(
                         romanoLine,
-                        style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
                     if (rangoLine != null)
                       Text(
                         rangoLine,
-                        style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              SizedBox(
-                height: 40,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DocumentoFormScreen(initialCarpetaId: carpeta.id),
-                      ),
-                    );
-                    if (result == true) {
-                      await cargarDocumentos();
-                      await _cargarCarpetas();
-                      await _cargarDocumentosCarpeta(carpeta.id);
-                    }
-                  },
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Agregar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
+        if (_canCreateDocument())
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: () => _abrirDocumentoEnCarpeta(carpeta),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Agregar documento en esta carpeta'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Row(
@@ -404,9 +445,15 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                     icon: const Icon(Icons.grid_view_rounded, size: 18),
                     label: const Text('Cuadricula'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _vistaGrid ? Colors.blue.shade600 : Colors.blue.shade50,
-                      foregroundColor: _vistaGrid ? Colors.white : Colors.blue.shade700,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor:
+                          _vistaGrid
+                              ? Colors.blue.shade600
+                              : Colors.blue.shade50,
+                      foregroundColor:
+                          _vistaGrid ? Colors.white : Colors.blue.shade700,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -420,9 +467,15 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                     icon: const Icon(Icons.list_rounded, size: 18),
                     label: const Text('Lista'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: !_vistaGrid ? Colors.blue.shade600 : Colors.blue.shade50,
-                      foregroundColor: !_vistaGrid ? Colors.white : Colors.blue.shade700,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor:
+                          !_vistaGrid
+                              ? Colors.blue.shade600
+                              : Colors.blue.shade50,
+                      foregroundColor:
+                          !_vistaGrid ? Colors.white : Colors.blue.shade700,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -431,17 +484,18 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
           ),
         ),
         Expanded(
-          child: _estaCargandoDocumentosCarpeta
-              ? const Center(child: CircularProgressIndicator())
-              : docs.isEmpty
+          child:
+              _estaCargandoDocumentosCarpeta
+                  ? const Center(child: CircularProgressIndicator())
+                  : docs.isEmpty
                   ? EmptyState(
-                      icon: Icons.description_outlined,
-                      title: 'Sin documentos',
-                      subtitle: 'Agregue el primer documento a esta carpeta',
-                    )
+                    icon: Icons.description_outlined,
+                    title: 'Sin documentos',
+                    subtitle: 'Agregue el primer documento a esta carpeta',
+                  )
                   : _vistaGrid
-                      ? _construirGridDocumentosCarpeta(docs, theme)
-                      : _construirListaDocumentos(docs, theme),
+                  ? _construirGridDocumentosCarpeta(docs, theme)
+                  : _construirListaDocumentos(docs, theme),
         ),
       ],
     );
@@ -458,8 +512,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     return 'Comprobantes ${nums.first} - ${nums.last}';
   }
 
-
-  Widget _construirGridDocumentosCarpeta(List<Documento> docs, ThemeData theme) {
+  Widget _construirGridDocumentosCarpeta(
+    List<Documento> docs,
+    ThemeData theme,
+  ) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -469,7 +525,8 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         mainAxisSpacing: 20,
       ),
       itemCount: docs.length,
-      itemBuilder: (context, index) => _buildModernCard(docs[index], theme, index),
+      itemBuilder:
+          (context, index) => _buildModernCard(docs[index], theme, index),
     );
   }
 
@@ -488,7 +545,9 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: theme.colorScheme.outline.withOpacity(0.1)),
+              border: Border.all(
+                color: theme.colorScheme.outline.withOpacity(0.1),
+              ),
             ),
             child: Row(
               children: [
@@ -499,19 +558,38 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.description_rounded, color: Colors.blue, size: 18),
+                  child: const Icon(
+                    Icons.description_rounded,
+                    color: Colors.blue,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(d.codigo, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                      Text(d.descripcion ?? 'Sin descripcion', style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                      Text(
+                        d.codigo,
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        d.descripcion ?? 'Sin descripcion',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                Text('N? ${d.numeroCorrelativo}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(
+                  'N? ${d.numeroCorrelativo}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -574,12 +652,17 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.folder_shared_rounded, color: Colors.amber.shade800),
+                  icon: Icon(
+                    Icons.folder_shared_rounded,
+                    color: Colors.amber.shade800,
+                  ),
                   tooltip: 'Gestionar Carpetas',
                   onPressed: () {
-                     Navigator.push(
+                    Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CarpetasScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const CarpetasScreen(),
+                      ),
                     );
                   },
                 ),
@@ -595,36 +678,19 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   border: Border.all(color: Colors.amber.shade200),
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.create_new_folder_rounded, color: Colors.amber.shade900),
+                  icon: Icon(
+                    Icons.create_new_folder_rounded,
+                    color: Colors.amber.shade900,
+                  ),
                   tooltip: 'Nueva Carpeta Pública',
                   onPressed: _abrirNuevaCarpeta,
                 ),
               ),
               const SizedBox(width: 8),
-              if (canCreate) ...[
-                _buildAddButton(theme),
-                const SizedBox(width: 8),
-              ],
               _buildFilterButton(theme),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAddButton(ThemeData theme) {
-    return Container(
-      height: 54,
-      width: 54,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: IconButton(
-        icon: Icon(Icons.add_rounded, color: theme.colorScheme.primary),
-        tooltip: 'Agregar documento',
-        onPressed: _abrirNuevoDocumento,
       ),
     );
   }
@@ -704,6 +770,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       ),
     );
   }
+
   Widget _construirShimmerCarga(int columns) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -766,7 +833,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     );
   }
 
-
   Widget _construirGridDocumentos(ThemeData theme, int columns) {
     final filtrados = _documentosFiltrados;
     return RefreshIndicator(
@@ -787,7 +853,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     );
   }
 
-
   Widget _buildModernCard(Documento doc, ThemeData theme, int index) {
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 400 + (index * 100)),
@@ -803,7 +868,9 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: theme.colorScheme.outline.withOpacity(0.08)),
+          border: Border.all(
+            color: theme.colorScheme.outline.withOpacity(0.08),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -832,7 +899,11 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: Colors.blue.shade100),
                         ),
-                        child: const Icon(Icons.description_rounded, color: Colors.blue, size: 22),
+                        child: const Icon(
+                          Icons.description_rounded,
+                          color: Colors.blue,
+                          size: 22,
+                        ),
                       ),
                       const Spacer(),
                       _buildCardHeader(doc, theme),
@@ -981,7 +1052,21 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     );
     if (result == true) {
       cargarDocumentos();
-    _cargarCarpetas();
+      _cargarCarpetas();
+    }
+  }
+
+  Future<void> _abrirDocumentoEnCarpeta(Carpeta carpeta) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DocumentoFormScreen(initialCarpetaId: carpeta.id),
+      ),
+    );
+    if (result == true) {
+      await cargarDocumentos();
+      await _cargarCarpetas();
+      await _cargarDocumentosCarpeta(carpeta.id);
     }
   }
 
@@ -1018,5 +1103,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         duration: const Duration(seconds: 5),
       ),
     );
+  }
+
+  bool _canCreateDocument() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    return authProvider.role != UserRole.gerente;
   }
 }
