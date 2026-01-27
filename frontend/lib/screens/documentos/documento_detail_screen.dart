@@ -36,6 +36,7 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
   bool _isUploadingAnexo = false;
   Uint8List? _previewPdfBytes;
   String? _previewFileName;
+  bool _anexosLoaded = false;
 
   @override
   void initState() {
@@ -48,7 +49,15 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
         _generateQr();
       }
     });
-    _loadAnexos();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_anexosLoaded) {
+      _anexosLoaded = true;
+      _loadAnexos();
+    }
   }
 
   String? _normalizeQrData(String? value) {
