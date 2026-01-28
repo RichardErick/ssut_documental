@@ -298,23 +298,93 @@ public class CarpetasController : ControllerBase
         if (carpeta == null)
             return NotFound(new { message = "Carpeta no encontrada" });
 
-        if (carpeta.Subcarpetas.Any())
-            return BadRequest(new { message = "No se puede eliminar una carpeta con subcarpetas" });
-
-        if (carpeta.Documentos.Any())
-            return BadRequest(new { message = "No se puede eliminar una carpeta con documentos" });
-
+        // Soft delete: mantener las restricciones para evitar "dejar huérfanos" en UI.
         if (!hard)
         {
+            if (carpeta.Subcarpetas.Any())
+                return BadRequest(new { message = "No se puede eliminar una carpeta con subcarpetas" });
+
+            if (carpeta.Documentos.Any())
+                return BadRequest(new { message = "No se puede eliminar una carpeta con documentos" });
+
             carpeta.Activo = false;
             await _context.SaveChangesAsync();
             return Ok(new { message = "Carpeta desactivada" });
         }
 
-        _context.Carpetas.Remove(carpeta);
-        await _context.SaveChangesAsync();
+        // Hard delete (cascada): eliminar subcarpetas y documentos asociados.
+        // Importante: Documento->Carpeta tiene OnDelete(SetNull), así que si queremos
+        // borrar documentos al eliminar carpeta, debemos eliminarlos explícitamente.
+        await using var tx = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var (idsToDelete, depths) = await GetDescendantCarpetaIdsWithDepthAsync(id);
 
-        return NoContent();
+            var documentos = await _context.Documentos
+                .Where(d => d.CarpetaId.HasValue && idsToDelete.Contains(d.CarpetaId.Value))
+                .ToListAsync();
+
+            if (documentos.Count > 0)
+            {
+                _context.Documentos.RemoveRange(documentos);
+                await _context.SaveChangesAsync();
+            }
+
+            // Eliminar carpetas de hojas a raíz (depth descendente) para evitar problemas
+            // con FKs cuando la cascada no aplique por configuración/DB.
+            var carpetasToDelete = await _context.Carpetas
+                .Where(c => idsToDelete.Contains(c.Id))
+                .ToListAsync();
+
+            var ordered = carpetasToDelete
+                .OrderByDescending(c => depths.TryGetValue(c.Id, out var d) ? d : 0)
+                .ToList();
+
+            _context.Carpetas.RemoveRange(ordered);
+            await _context.SaveChangesAsync();
+
+            await tx.CommitAsync();
+            return Ok(new { message = "Carpeta eliminada (cascada)" });
+        }
+        catch (Exception ex)
+        {
+            await tx.RollbackAsync();
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "Error eliminando carpeta en cascada",
+                error = ex.Message
+            });
+        }
+    }
+
+    private async Task<(HashSet<int> Ids, Dictionary<int, int> Depths)> GetDescendantCarpetaIdsWithDepthAsync(int rootId)
+    {
+        var ids = new HashSet<int> { rootId };
+        var depths = new Dictionary<int, int> { [rootId] = 0 };
+
+        var frontier = new List<int> { rootId };
+        var depth = 0;
+
+        while (frontier.Count > 0)
+        {
+            depth += 1;
+            var children = await _context.Carpetas
+                .Where(c => c.CarpetaPadreId.HasValue && frontier.Contains(c.CarpetaPadreId.Value))
+                .Select(c => new { c.Id, c.CarpetaPadreId })
+                .ToListAsync();
+
+            frontier = new List<int>();
+            foreach (var child in children)
+            {
+                if (ids.Add(child.Id))
+                {
+                    depths[child.Id] = depth;
+                    frontier.Add(child.Id);
+                }
+            }
+        }
+
+        return (ids, depths);
     }
 
     private static int? ParseCorrelativo(string? value)
