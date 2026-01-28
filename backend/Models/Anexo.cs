@@ -26,7 +26,7 @@ public class Anexo
     [StringLength(10)]
     public string? Extension { get; set; }
 
-    [Column("tamano")]
+    [Column("tamano_bytes")]
     public int? Tamano { get; set; }
 
     [Column("url_archivo")]

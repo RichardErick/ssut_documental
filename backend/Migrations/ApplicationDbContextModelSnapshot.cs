@@ -128,7 +128,7 @@ namespace SistemaGestionDocumental.Migrations
 
                     b.Property<int?>("Tamano")
                         .HasColumnType("integer")
-                        .HasColumnName("tamano");
+                        .HasColumnName("tamano_bytes");
 
                     b.Property<string>("TipoContenido")
                         .HasMaxLength(100)

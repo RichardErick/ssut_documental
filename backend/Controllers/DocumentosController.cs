@@ -825,10 +825,9 @@ public class DocumentosController : ControllerBase
         return Ok(anexos);
     }
 
-    // POST: api/documentos/{id}/anexos
     [HttpPost("{id}/anexos")]
     [RequestSizeLimit(MaxUploadBytes)]
-    public async Task<ActionResult> SubirAnexo(int id, IFormFile? file)
+    public async Task<ActionResult> SubirAnexo(int id, [FromForm] IFormFile? file)
     {
         var documento = await _context.Documentos.FindAsync(id);
         if (documento == null || !documento.Activo)
@@ -851,9 +850,20 @@ public class DocumentosController : ControllerBase
         if (!string.IsNullOrWhiteSpace(dir))
             Directory.CreateDirectory(dir);
 
-        await using (var stream = System.IO.File.Create(fullPath))
+        try
         {
-            await file.CopyToAsync(stream);
+            await using (var stream = System.IO.File.Create(fullPath))
+            {
+                await file.CopyToAsync(stream);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al crear el archivo físico en {Path}", fullPath);
+            return StatusCode(500, new { 
+                message = "Error al guardar el archivo en el servidor", 
+                detail = ex.Message 
+            });
         }
 
         var anexo = new Anexo
@@ -868,9 +878,20 @@ public class DocumentosController : ControllerBase
             Activo = true
         };
 
-        _context.Anexos.Add(anexo);
-        documento.FechaActualizacion = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.Anexos.Add(anexo);
+            documento.FechaActualizacion = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al guardar el anexo en la base de datos para el documento {DocumentoId}", id);
+            return StatusCode(500, new { 
+                message = "Error interno al guardar en la base de datos", 
+                detail = ex.InnerException?.Message ?? ex.Message 
+            });
+        }
 
         return Ok(new
         {

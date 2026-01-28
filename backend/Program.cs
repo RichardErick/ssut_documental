@@ -10,6 +10,10 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar comportamiento de fechas para Npgsql (PostgreSQL)
+// Esto evita errores al guardar DateTime.UtcNow en columnas tipo TIMESTAMP sin zona horaria
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 // Agrega los servicios .
 builder.Services.AddControllers().AddJsonOptions(options =>
 {

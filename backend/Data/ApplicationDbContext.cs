@@ -166,11 +166,6 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Anexo>(entity =>
         {
             entity.HasIndex(a => a.DocumentoId);
-            
-            entity.HasOne(a => a.Documento)
-                .WithMany()
-                .HasForeignKey(a => a.DocumentoId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configuración de HistorialDocumento
@@ -178,10 +173,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasIndex(h => h.DocumentoId);
             
-            entity.HasOne(h => h.Documento)
-                .WithMany(d => d.HistorialDocumentos)
-                .HasForeignKey(h => h.DocumentoId)
-                .OnDelete(DeleteBehavior.Cascade);
+
 
             entity.HasOne(h => h.Usuario)
                 .WithMany()
@@ -224,10 +216,7 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(a => a.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(a => a.Documento)
-                .WithMany(d => d.Alertas)
-                .HasForeignKey(a => a.DocumentoId)
-                .OnDelete(DeleteBehavior.SetNull);
+
 
             entity.HasOne(a => a.Movimiento)
                 .WithMany()
