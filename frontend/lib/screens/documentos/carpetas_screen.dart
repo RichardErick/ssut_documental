@@ -26,10 +26,13 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
   }
 
   Future<void> _loadCarpetas() async {
+    print('🔄 [CARPETAS] Iniciando carga de carpetas para gestión: $_gestion');
     setState(() => _isLoading = true);
     try {
       final carpetaService = Provider.of<CarpetaService>(context, listen: false);
       final carpetas = await carpetaService.getArbol(_gestion);
+      print('📦 [CARPETAS] Carpetas recibidas: ${carpetas.length}');
+      
       final ordered = [...carpetas]
         ..sort((a, b) {
           final aIsMain = a.nombre == _nombreCarpetaPermitida;
@@ -37,8 +40,16 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
           if (aIsMain == bIsMain) return a.id.compareTo(b.id);
           return aIsMain ? -1 : 1;
         });
+      
+      print('📋 [CARPETAS] Carpetas ordenadas:');
+      for (var carpeta in ordered) {
+        print('  - ID: ${carpeta.id}, Nombre: "${carpeta.nombre}", Subcarpetas: ${carpeta.subcarpetas.length}');
+      }
+      
       setState(() => _carpetas = ordered);
+      print('✅ [CARPETAS] Estado actualizado con ${_carpetas.length} carpetas');
     } catch (e) {
+      print('❌ [CARPETAS] Error al cargar carpetas: $e');
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Error al cargar carpetas: $e')));
@@ -208,6 +219,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
   }
 
   Widget _buildCarpetaItem(Carpeta carpeta) {
+    print('🎨 [RENDER] Construyendo carpeta: ID=${carpeta.id}, Nombre="${carpeta.nombre}"');
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -252,7 +264,10 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
                         IconButton(
                           icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade700, size: 22),
                           tooltip: 'Eliminar Subcarpeta',
-                          onPressed: () => _confirmarEliminarCarpeta(sub),
+                          onPressed: () {
+                            print('🗑️ [ACTION] Botón eliminar subcarpeta presionado: ID=${sub.id}, Nombre="${sub.nombre}"');
+                            _confirmarEliminarCarpeta(sub);
+                          },
                         ),
                         // Un icono visual para indicar que se puede entrar (aunque onTap está pendiente)
                         const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
@@ -278,18 +293,25 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
   }
 
   Widget _buildCarpetaActions(Carpeta carpeta) {
+    print('🔘 [ACTIONS] Construyendo botones de acción para carpeta: ID=${carpeta.id}, Nombre="${carpeta.nombre}"');
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           icon: Icon(Icons.create_new_folder_outlined, color: Colors.blue.shade700),
           tooltip: 'Nueva Subcarpeta',
-          onPressed: () => _crearCarpeta(padreId: carpeta.id),
+          onPressed: () {
+            print('➕ [ACTION] Botón crear subcarpeta presionado para: ID=${carpeta.id}');
+            _crearCarpeta(padreId: carpeta.id);
+          },
         ),
         IconButton(
           icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
           tooltip: 'Eliminar Carpeta',
-          onPressed: () => _confirmarEliminarCarpeta(carpeta),
+          onPressed: () {
+            print('🗑️ [ACTION] Botón eliminar carpeta presionado: ID=${carpeta.id}, Nombre="${carpeta.nombre}"');
+            _confirmarEliminarCarpeta(carpeta);
+          },
         ),
         // Icono para indicar expansión manualmente ya que overrideamos trailing
         const Padding(

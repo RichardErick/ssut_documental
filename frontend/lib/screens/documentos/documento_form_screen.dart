@@ -155,7 +155,13 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
       final documentoService = Provider.of<DocumentoService>(context, listen: false);
       
       if (widget.documento == null) {
-        // Crear
+        // Validación: Responsable es obligatorio
+        if (_responsableId == null) {
+          _showSnack('Debe seleccionar un responsable', background: Colors.orange);
+          setState(() => _isLoading = false);
+          return;
+        }
+        
         // Crear
         final dto = CreateDocumentoDTO(
           numeroCorrelativo: _numeroCorrelativoController.text,
@@ -440,15 +446,13 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           value: _responsableId,
-                          decoration: _inputDecoration('Responsable'),
-                          items: [
-                            const DropdownMenuItem<int>(value: null, child: Text('Sin responsable')),
-                            ..._usuarios.map((u) => DropdownMenuItem<int>(
-                              value: u.id,
-                              child: Text(u.nombreCompleto),
-                            )),
-                          ],
+                          decoration: _inputDecoration('Responsable *'),
+                          items: _usuarios.map((u) => DropdownMenuItem<int>(
+                            value: u.id,
+                            child: Text(u.nombreCompleto),
+                          )).toList(),
                           onChanged: (v) => setState(() => _responsableId = v),
+                          validator: (v) => v == null ? 'Responsable requerido' : null,
                         ),
                       ),
                       const SizedBox(width: 16),
