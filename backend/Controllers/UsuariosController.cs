@@ -10,6 +10,7 @@ namespace SistemaGestionDocumental.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UsuariosController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -230,6 +231,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpPut("{id}/estado")]
+    [Authorize(Roles = "AdministradorSistema,Administrador,AdministradorDocumentos")]
     public async Task<ActionResult> UpdateEstado(int id, [FromBody] UpdateEstadoDTO dto)
     {
         var usuario = await _context.Usuarios.FindAsync(id);
@@ -240,6 +242,24 @@ public class UsuariosController : ControllerBase
         usuario.FechaActualizacion = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        // Notificar al usuario (si aplica)
+        try
+        {
+            _context.Alertas.Add(new Alerta
+            {
+                UsuarioId = usuario.Id,
+                Titulo = dto.Activo ? "Cuenta aprobada" : "Cuenta desactivada",
+                Mensaje = dto.Activo
+                    ? "Tu cuenta fue aprobada por un administrador. Ya puedes iniciar sesión."
+                    : "Tu cuenta fue desactivada por un administrador.",
+                TipoAlerta = dto.Activo ? "success" : "warning",
+                FechaCreacion = DateTime.UtcNow,
+                Leida = false
+            });
+            await _context.SaveChangesAsync();
+        }
+        catch { }
 
         return Ok(new
         {
@@ -318,6 +338,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "AdministradorSistema,Administrador,AdministradorDocumentos")]
     public async Task<ActionResult> DeleteUsuario(int id, [FromQuery] bool hard = false)
     {
         var usuario = await _context.Usuarios.FindAsync(id);

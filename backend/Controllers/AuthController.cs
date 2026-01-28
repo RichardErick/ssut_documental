@@ -74,12 +74,14 @@ public class AuthController : ControllerBase
         }
 
         var alertsError = false;
+        var alertsCreated = 0;
 
         try
         {
             // Notify Admins
             // We search for users with roles that can manage users
             var admins = await _context.Usuarios
+                .Where(u => u.Activo)
                 .Where(u => u.Rol == UsuarioRol.Administrador || u.Rol == UsuarioRol.AdministradorDocumentos)
                 .ToListAsync();
 
@@ -89,17 +91,15 @@ public class AuthController : ControllerBase
                 {
                     UsuarioId = admin.Id,
                     Titulo = "Nuevo Registro de Usuario",
-                    Mensaje = $"El usuario {newUser.NombreCompleto} ({newUser.NombreUsuario}) se ha registrado y requiere aprobación para ingresar.",
+                    Mensaje = $"El usuario {newUser.NombreCompleto} ({newUser.NombreUsuario}) se ha registrado y requiere aprobación para ingresar. (UsuarioId: {newUser.Id})",
                     TipoAlerta = "warning",
                     FechaCreacion = DateTime.UtcNow,
                     Leida = false
                 });
+                alertsCreated++;
             }
 
-            if (admins.Any())
-            {
-                await _context.SaveChangesAsync();
-            }
+            if (admins.Any()) await _context.SaveChangesAsync();
         }
         catch (Exception)
         {
@@ -110,7 +110,7 @@ public class AuthController : ControllerBase
             ? "Registro exitoso. No se pudo notificar a los administradores."
             : "Registro exitoso. Pendiente de aprobación por parte de un administrador.";
 
-        return Ok(new { message = responseMessage });
+        return Ok(new { message = responseMessage, alertsCreated, alertsError });
     }
 
     private string HashPassword(string password)
@@ -145,35 +145,14 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Su cuenta está pendiente de aprobación por un administrador." });
         }
 
-        if (usuario.BloqueadoHasta.HasValue && usuario.BloqueadoHasta.Value > DateTime.UtcNow)
-        {
-            var remaining = (int)Math.Ceiling((usuario.BloqueadoHasta.Value - DateTime.UtcNow).TotalSeconds);
-            return StatusCode(StatusCodes.Status423Locked, new
-            {
-                message = $"Cuenta bloqueada temporalmente. Intente en {remaining} segundos.",
-                remainingSeconds = remaining,
-                bloqueadoHasta = usuario.BloqueadoHasta.Value
-            });
-        }
+        // Nota: El sistema NO bloquea por intentos fallidos.
+        // Se mantiene el conteo para auditoría/advertencia, pero sin lockout.
 
         if (!VerifyPassword(dto.Password, usuario.PasswordHash))
         {
             usuario.IntentosFallidos += 1;
-
-            // Política de bloqueo escalonado:
-            // - A partir de 5 intentos fallidos: bloqueo temporal (30 segundos)
-            // - Si se sigue equivocando y llega a 10 intentos o más: bloqueo de 1 hora
-            const int softThreshold = 5;
-            const int hardThreshold = 10;
-
-            if (usuario.IntentosFallidos >= hardThreshold)
-            {
-                usuario.BloqueadoHasta = DateTime.UtcNow.AddHours(1);
-            }
-            else if (usuario.IntentosFallidos >= softThreshold)
-            {
-                usuario.BloqueadoHasta = DateTime.UtcNow.AddSeconds(30);
-            }
+            // Nunca bloquear: asegurar que no quede un lockout viejo en BD
+            usuario.BloqueadoHasta = null;
 
             usuario.FechaActualizacion = DateTime.UtcNow;
             try
@@ -189,7 +168,19 @@ public class AuthController : ControllerBase
                 });
             }
 
-            return Unauthorized(new { message = "Credenciales inválidas" });
+            const int warningThreshold = 5;
+            var intentos = usuario.IntentosFallidos;
+            var advertencia = intentos >= warningThreshold
+                ? $"Advertencia: {intentos} intentos fallidos. Verifique sus credenciales."
+                : $"Intento fallido {intentos}/{warningThreshold}.";
+
+            return Unauthorized(new
+            {
+                message = "Credenciales inválidas",
+                warning = advertencia,
+                failedAttempts = intentos,
+                warningThreshold
+            });
         }
 
         usuario.IntentosFallidos = 0;

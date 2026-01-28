@@ -91,8 +91,9 @@ class ErrorHelper {
         }
 
         if (serverMessage != null && serverMessage.isNotEmpty) {
-           if (statusCode == 423) return serverMessage;
-           // For other codes, we might still want the friendly default unless specific
+          // Si el backend manda un mensaje específico, respetarlo.
+          if (statusCode == 401) return serverMessage;
+          if (statusCode == 423) return serverMessage;
         }
 
         // Mensajes específicos por código de estado
@@ -100,7 +101,8 @@ class ErrorHelper {
           return 'Solicitud inválida. Verifique los datos ingresados.';
         }
         if (statusCode == 401) {
-          return 'Credenciales inválidas. Verifique su usuario y contraseña.';
+          return serverMessage ??
+              'Credenciales inválidas. Verifique su usuario y contraseña.';
         }
         if (statusCode == 403) {
           return 'No tiene permisos para realizar esta acción.';
@@ -109,7 +111,8 @@ class ErrorHelper {
           return 'Recurso no encontrado.';
         }
         if (statusCode == 423) {
-          return serverMessage ?? 'Cuenta bloqueada temporalmente por exceso de intentos.';
+          return serverMessage ??
+              'Cuenta bloqueada temporalmente por exceso de intentos.';
         }
         if (statusCode == 500) {
           return 'Error del servidor. Por favor, intente más tarde.';
