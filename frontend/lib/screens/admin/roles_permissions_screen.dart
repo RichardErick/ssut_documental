@@ -950,14 +950,13 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                              child: Text(
-                                _getRolDisplayName(rol),
-                                overflow: TextOverflow.ellipsis,
+                                child: Text(
+                                  _getRolDisplayName(rol),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ).toList(),
                     ],
