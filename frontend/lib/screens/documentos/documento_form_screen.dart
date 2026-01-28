@@ -104,12 +104,16 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
         setState(() {
           _usuarios = results[0] as List<Usuario>;
           _carpetas = results[1] as List<Carpeta>;
-          _areas = results[2] as List<Map<String, dynamic>>;
-          _tiposDocumento = results[3] as List<Map<String, dynamic>>;
-          if (_tipoDocumentoId != null &&
-              !_tiposDocumento.any((t) => t['id'] == _tipoDocumentoId)) {
-            _tipoDocumentoId = null;
+          _areas = (results[2] as List<Map<String, dynamic>>);
+          
+          // Filtrar solo Contabilidad
+          final contabilidad = _areas.where((a) => a['nombre'].toString().toLowerCase().contains('contabilidad')).toList();
+          
+          if (contabilidad.isNotEmpty) {
+             _areas = contabilidad;
+             _areaOrigenId = contabilidad.first['id'];
           }
+
           if (_areaOrigenId != null &&
               !_areas.any((a) => a['id'] == _areaOrigenId)) {
             _areaOrigenId = null;
@@ -304,33 +308,11 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                   _buildSectionTitle('Información General'),
                   const SizedBox(height: 16),
                   
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: DropdownButtonFormField<int>(
-                          value: _tipoDocumentoId,
-                          isExpanded: true,
-                          decoration: _inputDecoration('Tipo'),
-                          items: _tiposDocumento.map((t) => DropdownMenuItem<int>(
-                            value: t['id'],
-                            child: Text(t['nombre'], overflow: TextOverflow.ellipsis),
-                          )).toList(),
-                          onChanged: (v) => setState(() => _tipoDocumentoId = v),
-                          validator: (v) => v == null ? 'Requerido' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
-                          controller: _numeroCorrelativoController,
-                          decoration: _inputDecoration('N° Corr.'),
-                          keyboardType: TextInputType.number,
-                          validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    controller: _numeroCorrelativoController,
+                    decoration: _inputDecoration('N° Correlativo'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
                   ),
                   const SizedBox(height: 16),
                   
@@ -346,7 +328,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                             value: t['id'],
                             child: Text(t['nombre'], overflow: TextOverflow.ellipsis),
                           )).toList(),
-                          onChanged: (v) => setState(() => _areaOrigenId = v),
+                          onChanged: _areas.length == 1 ? null : (v) => setState(() => _areaOrigenId = v),
                           validator: (v) => v == null ? 'Requerido' : null,
                         ),
                       ),
@@ -441,36 +423,15 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          value: _responsableId,
-                          decoration: _inputDecoration('Responsable *'),
-                          items: _usuarios.map((u) => DropdownMenuItem<int>(
-                            value: u.id,
-                            child: Text(u.nombreCompleto),
-                          )).toList(),
-                          onChanged: (v) => setState(() => _responsableId = v),
-                          validator: (v) => v == null ? 'Responsable requerido' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          value: _nivelConfidencialidad,
-                          decoration: _inputDecoration('Confidencialidad'),
-                          items: const [
-                            DropdownMenuItem(value: 1, child: Text('1 - Público')),
-                            DropdownMenuItem(value: 2, child: Text('2 - Interno')),
-                            DropdownMenuItem(value: 3, child: Text('3 - Restringido')),
-                            DropdownMenuItem(value: 4, child: Text('4 - Confidencial')),
-                            DropdownMenuItem(value: 5, child: Text('5 - Secreto')),
-                          ],
-                          onChanged: (v) => setState(() => _nivelConfidencialidad = v!),
-                        ),
-                      ),
-                    ],
+                  DropdownButtonFormField<int>(
+                    value: _responsableId,
+                    decoration: _inputDecoration('Responsable *'),
+                    items: _usuarios.map((u) => DropdownMenuItem<int>(
+                      value: u.id,
+                      child: Text(u.nombreCompleto),
+                    )).toList(),
+                    onChanged: (v) => setState(() => _responsableId = v),
+                    validator: (v) => v == null ? 'Responsable requerido' : null,
                   ),
                   const SizedBox(height: 16),
 
