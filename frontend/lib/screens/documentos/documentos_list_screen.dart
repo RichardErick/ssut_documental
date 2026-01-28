@@ -1006,6 +1006,21 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
             color: theme.colorScheme.primary,
           ),
         ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: Icon(
+            Icons.delete_outline_rounded,
+            size: 20,
+            color: Colors.red.shade600,
+          ),
+          onPressed: () => _confirmarEliminarDocumento(doc),
+          tooltip: 'Eliminar documento',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
       ],
     );
   }
@@ -1040,13 +1055,83 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     return '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
   }
 
-  void _navegarAlDetalle(Documento doc) {
-    Navigator.push(
+  void _navegarAlDetalle(Documento doc) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => DocumentoDetailScreen(documento: doc),
       ),
     );
+    
+    // Si se eliminó el documento desde el detalle, recargar la lista
+    if (result == true) {
+      cargarDocumentos();
+      if (_carpetaSeleccionada != null) {
+        _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+      }
+    }
+  }
+
+  Future<void> _confirmarEliminarDocumento(Documento doc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar documento'),
+        content: Text(
+          '¿Estás seguro de eliminar el documento "${doc.codigo}"?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sí, Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _eliminarDocumento(doc);
+    }
+  }
+
+  Future<void> _eliminarDocumento(Documento doc) async {
+    try {
+      final service = Provider.of<DocumentoService>(context, listen: false);
+      await service.delete(doc.id);
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Text('Documento "${doc.codigo}" eliminado correctamente'),
+            ],
+          ),
+          backgroundColor: AppTheme.colorExito,
+        ),
+      );
+      
+      // Recargar la lista de documentos
+      cargarDocumentos();
+      if (_carpetaSeleccionada != null) {
+        _cargarDocumentosCarpeta(_carpetaSeleccionada!.id);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      _mostrarSnackBarError('Error al eliminar: ${ErrorHelper.getErrorMessage(e)}');
+    }
   }
 
   Future<void> _abrirNuevoDocumento() async {

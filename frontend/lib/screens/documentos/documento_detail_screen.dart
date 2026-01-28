@@ -147,6 +147,16 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       ),
       actions: [
         IconButton(
+          icon: const Icon(Icons.delete_outline_rounded),
+          onPressed: () => _confirmarEliminarDocumento(doc),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.red.shade50,
+            foregroundColor: Colors.red.shade700,
+          ),
+          tooltip: 'Eliminar documento',
+        ),
+        const SizedBox(width: 8),
+        IconButton(
           icon: const Icon(Icons.print_rounded),
           onPressed: _printDocumento,
           style: IconButton.styleFrom(
@@ -562,6 +572,70 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _confirmarEliminarDocumento(Documento doc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar documento'),
+        content: Text(
+          '¿Estás seguro de eliminar el documento "${doc.codigo}"?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sí, Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _eliminarDocumento(doc);
+    }
+  }
+
+  Future<void> _eliminarDocumento(Documento doc) async {
+    try {
+      final service = Provider.of<DocumentoService>(context, listen: false);
+      await service.delete(doc.id);
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Text('Documento "${doc.codigo}" eliminado correctamente'),
+            ],
+          ),
+          backgroundColor: AppTheme.colorExito,
+        ),
+      );
+      
+      // Regresar a la pantalla anterior
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al eliminar: ${ErrorHelper.getErrorMessage(e)}'),
+          backgroundColor: AppTheme.colorError,
+        ),
+      );
     }
   }
 

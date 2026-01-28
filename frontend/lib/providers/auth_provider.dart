@@ -43,6 +43,8 @@ class AuthProvider extends ChangeNotifier {
     return true;
   }
 
+  DateTime? get lockoutEndTime => _lockoutEndTime;
+
   Duration get remainingLockoutTime {
     if (_lockoutEndTime == null) return Duration.zero;
     return _lockoutEndTime!.difference(DateTime.now());

@@ -761,8 +761,11 @@ class _PermisosScreenState extends State<PermisosScreen> {
                   value: tienePermiso,
                   onChanged: (val) => _onPermisoChanged(entry, val), // Allow toggle always
                   activeColor: AppTheme.colorExito,
-                  inactiveTrackColor: isExplicitlyDenied ? Colors.red.withOpacity(0.2) : null,
-                  inactiveThumbColor: isExplicitlyDenied ? Colors.red : null,
+                  activeTrackColor: AppTheme.colorExito.withOpacity(0.5),
+                  inactiveTrackColor: isExplicitlyDenied 
+                    ? Colors.red.withOpacity(0.3) 
+                    : Colors.grey.withOpacity(0.3),
+                  inactiveThumbColor: isExplicitlyDenied ? Colors.red.shade400 : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

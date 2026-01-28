@@ -9,6 +9,7 @@ import '../widgets/animated_background.dart';
 import '../widgets/glass_container.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
+import 'login/widgets/lockout_timer.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -107,6 +108,8 @@ class _LoginScreenState extends State<LoginScreen>
       } catch (e) {
         String msg = ErrorHelper.getErrorMessage(e);
         _showError(msg);
+        // Trigger rebuild to show lockout timer if locked
+        setState(() {});
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -225,161 +228,174 @@ class _LoginScreenState extends State<LoginScreen>
                   child: Container(
                     constraints: const BoxConstraints(maxWidth: 450),
                     padding: const EdgeInsets.all(48),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Bienvenido de nuevo',
-                            style: GoogleFonts.poppins(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade900,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Ingrese sus credenciales para acceder',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 48),
-                          _buildTextField(
-                            controller: _usernameController,
-                            label: 'Usuario',
-                            hint: 'ej. juan.perez',
-                            icon: Icons.person_outline_rounded,
-                            isDark: true,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'Ingrese su usuario';
-                              }
-                              if (v.length < 4 || v.length > 20) {
-                                return 'Debe tener entre 4 y 20 caracteres';
-                              }
-                              if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v)) {
-                                return 'Solo letras, numeros y guion bajo';
-                              }
-                              return null;
+                    child: Consumer<AuthProvider>(
+                      builder: (context, authProvider, _) {
+                        if (authProvider.isLocked) {
+                          return LockoutTimer(
+                            lockoutEndTime: authProvider.lockoutEndTime!,
+                            onTimerEnd: () {
+                              setState(() {});
                             },
-                          ),
-                          const SizedBox(height: 24),
-                          _buildTextField(
-                            controller: _passwordController,
-                            label: 'Contrasena',
-                            hint: '********',
-                            icon: Icons.lock_outline_rounded,
-                            isPassword: true,
-                            isDark: true,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'Ingrese su contrasena';
-                              }
-                              if (v.length < 8) {
-                                return 'Minimo 8 caracteres';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          );
+                        }
+                        
+                        return Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              Text(
+                                'Bienvenido de nuevo',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade900,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Ingrese sus credenciales para acceder',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 48),
+                              _buildTextField(
+                                controller: _usernameController,
+                                label: 'Usuario',
+                                hint: 'ej. juan.perez',
+                                icon: Icons.person_outline_rounded,
+                                isDark: true,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Ingrese su usuario';
+                                  }
+                                  if (v.length < 4 || v.length > 20) {
+                                    return 'Debe tener entre 4 y 20 caracteres';
+                                  }
+                                  if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v)) {
+                                    return 'Solo letras, numeros y guion bajo';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              _buildTextField(
+                                controller: _passwordController,
+                                label: 'Contrasena',
+                                hint: '********',
+                                icon: Icons.lock_outline_rounded,
+                                isPassword: true,
+                                isDark: true,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Ingrese su contrasena';
+                                  }
+                                  if (v.length < 8) {
+                                    return 'Minimo 8 caracteres';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Checkbox(
-                                    value: _rememberMe,
-                                    activeColor: Colors.blue.shade900,
-                                    checkColor: Colors.white,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rememberMe = val ?? false;
-                                      });
-                                    },
+                                  Row(
+                                    children: [
+                                      Checkbox(
+                                        value: _rememberMe,
+                                        activeColor: Colors.blue.shade900,
+                                        checkColor: Colors.white,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rememberMe = val ?? false;
+                                          });
+                                        },
+                                      ),
+                                      Text(
+                                        'Recordarme',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    'Recordarme',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const ForgotPasswordScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      'Olvido su contrasena',
+                                      style: TextStyle(
+                                        color: Colors.blue.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const ForgotPasswordScreen(),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  'Olvido su contrasena',
-                                  style: TextStyle(
-                                    color: Colors.blue.shade700,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 40),
-                          _buildLoginButton(isDark: true),
-                          const SizedBox(height: 24),
-                          Center(
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const RegisterScreen(),
-                                  ),
-                                );
-                              },
-                              child: RichText(
-                                text: TextSpan(
-                                  text: 'No tienes cuenta? ',
-                                  style: TextStyle(
-                                    color: isDesktop
-                                        ? Colors.grey.shade600
-                                        : Colors.white70,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Registrarse',
+                              const SizedBox(height: 40),
+                              _buildLoginButton(isDark: true),
+                              const SizedBox(height: 24),
+                              Center(
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const RegisterScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: RichText(
+                                    text: TextSpan(
+                                      text: 'No tienes cuenta? ',
                                       style: TextStyle(
                                         color: isDesktop
-                                            ? Colors.blue.shade900
-                                            : Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
+                                            ? Colors.grey.shade600
+                                            : Colors.white70,
                                       ),
+                                      children: [
+                                        TextSpan(
+                                          text: 'Registrarse',
+                                          style: TextStyle(
+                                            color: isDesktop
+                                                ? Colors.blue.shade900
+                                                : Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            decoration: TextDecoration.underline,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 24),
+                              if (isDesktop)
+                                Center(
+                                  child: Text(
+                                    'SSUT - Gestion Documental v1.0',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                )
+                              else
+                                _buildFooter(),
+                            ],
                           ),
-                          const SizedBox(height: 24),
-                          if (isDesktop)
-                            Center(
-                              child: Text(
-                                'SSUT - Gestion Documental v1.0',
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            )
-                          else
-                            _buildFooter(),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ),
