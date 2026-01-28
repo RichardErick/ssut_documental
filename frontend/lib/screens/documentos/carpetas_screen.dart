@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/carpeta.dart';
 import '../../services/carpeta_service.dart';
 import 'documento_form_screen.dart';
+import 'carpeta_form_screen.dart';
 
 class CarpetasScreen extends StatefulWidget {
   const CarpetasScreen({super.key});
@@ -48,80 +49,16 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
   }
 
   Future<void> _crearCarpeta({int? padreId}) async {
-    if (padreId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solo se permite crear la carpeta Comprobante de Egreso'), backgroundColor: Colors.orange),
-      );
-      return;
-    }
-    if (_carpetas.any((c) => c.nombre == _nombreCarpetaPermitida)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La carpeta Comprobante de Egreso ya existe'), backgroundColor: Colors.orange),
-      );
-      return;
-    }
-    final nombreController = TextEditingController(text: _nombreCarpetaPermitida);
-    final numeroController = TextEditingController(text: _nextNumeroCarpeta().toString());
-    final descripcionController = TextEditingController();
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(padreId == null ? 'Nueva Carpeta Principal' : 'Nueva Subcarpeta'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nombreController,
-              readOnly: true,
-              decoration: const InputDecoration(labelText: 'Nombre *'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              readOnly: true,
-              controller: TextEditingController(text: _gestion),
-              decoration: const InputDecoration(labelText: 'Gesti??n'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              readOnly: true,
-              controller: numeroController,
-              decoration: const InputDecoration(labelText: 'N??mero Correlativo'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: descripcionController,
-              decoration: const InputDecoration(labelText: 'Descripcion'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () async {
-              if (nombreController.text.isEmpty) return;
-              try {
-                final carpetaService = Provider.of<CarpetaService>(context, listen: false);
-                await carpetaService.create(CreateCarpetaDTO(
-                  nombre: nombreController.text,
-                  codigo: null,
-                  gestion: _gestion,
-                  descripcion: descripcionController.text,
-                  carpetaPadreId: padreId,
-                ));
-                if (context.mounted) Navigator.pop(context);
-                _loadCarpetas();
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                }
-              }
-            },
-            child: const Text('Crear'),
-          ),
-        ],
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CarpetaFormScreen(padreId: padreId),
       ),
     );
+
+    if (result == true) {
+      _loadCarpetas();
+    }
   }
 
   @override
@@ -137,11 +74,11 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
           ),
         ],
       ),
-      floatingActionButton: hasCarpetas
+      floatingActionButton: !hasCarpetas || !_carpetas.any((c) => c.nombre == _nombreCarpetaPermitida)
           ? FloatingActionButton.extended(
               onPressed: () => _crearCarpeta(),
               icon: const Icon(Icons.create_new_folder),
-              label: const Text('Nueva Carpeta'),
+              label: const Text('Crear Comprobante Principal'),
               backgroundColor: Colors.amber.shade800,
             )
           : null,
@@ -234,17 +171,17 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Eliminar carpeta'),
         content: Text(
-          'Se eliminara la carpeta "${carpeta.nombre}". No se puede eliminar si tiene documentos o subcarpetas.',
+          '¿Estás seguro de eliminar la carpeta "${carpeta.nombre}"? Si eliminas, se borrará permanentemente. Si no, presiona Cancelar para conservar.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar (Conservar)'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600),
-            child: const Text('Eliminar'),
+            child: const Text('Sí, Borrar'),
           ),
         ],
       ),
@@ -280,50 +217,64 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
           backgroundColor: Colors.amber.shade100,
           child: Icon(Icons.folder_rounded, color: Colors.amber.shade800, size: 26),
         ),
-        title: Text(carpeta.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          carpeta.nombre,
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
         subtitle: _buildCarpetaSubtitle(carpeta),
+        trailing: _buildCarpetaActions(carpeta),
         children: [
           if (carpeta.subcarpetas.isNotEmpty)
             ...carpeta.subcarpetas.map((sub) => ListTile(
-                  contentPadding: const EdgeInsets.only(left: 32, right: 16),
+                  contentPadding: const EdgeInsets.only(left: 32, right: 8),
                   leading: Icon(Icons.folder_open_rounded, color: Colors.amber.shade400),
                   title: Text(sub.nombre),
-                  subtitle: Text('Romano ${sub.codigo ?? "S/C"} - ${sub.numeroDocumentos} docs'),
-                  trailing: const Icon(Icons.chevron_right),
+                  subtitle: Text('${sub.numeroDocumentos} documentos'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade700, size: 20),
+                        tooltip: 'Eliminar Subcarpeta',
+                        onPressed: () => _confirmarEliminarCarpeta(sub),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                    ],
+                  ),
                   onTap: () {
                     // TODO: Navegar a detalles de carpeta o lista de documentos filtrada
                   },
                 )),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _confirmarEliminarCarpeta(carpeta),
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                  label: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.redAccent),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () => _agregarDocumentoACarpeta(carpeta),
-                  icon: const Icon(Icons.note_add_rounded, size: 20, color: Colors.white),
-                  label: const Text('Agregar carpeta', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
+  }
+
+  Widget _buildCarpetaActions(Carpeta carpeta) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: Icon(Icons.create_new_folder_rounded, color: Colors.amber.shade800),
+          tooltip: 'Nueva Subcarpeta',
+          onPressed: () => _crearCarpeta(padreId: carpeta.id),
+        ),
+        IconButton(
+          icon: Icon(Icons.delete_rounded, color: Colors.red.shade700),
+          tooltip: 'Eliminar Carpeta',
+          onPressed: () => _confirmarEliminarCarpeta(carpeta),
+        ),
+      ],
+    );
+  }
+
+
+
+  int _nextNumeroSubcarpeta(int padreId) {
+    final padre = _carpetas.firstWhere((c) => c.id == padreId);
+    if (padre.subcarpetas.isEmpty) return 1;
+    return padre.subcarpetas.length + 1;
   }
 
   int _nextNumeroCarpeta() {

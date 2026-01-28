@@ -15,6 +15,8 @@ import 'services/sync_service.dart';
 import 'services/usuario_service.dart';
 import 'services/carpeta_service.dart';
 import 'services/catalogo_service.dart';
+import 'services/anexo_service.dart';
+import 'services/permiso_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -54,6 +56,10 @@ class MyApp extends StatelessWidget {
         Provider(create: (_) => UsuarioService()),
         Provider(create: (_) => CarpetaService()),
         Provider(create: (_) => CatalogoService()),
+        Provider(create: (_) => AnexoService()),
+        ProxyProvider<ApiService, PermisoService>(
+          update: (_, api, __) => PermisoService(api),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

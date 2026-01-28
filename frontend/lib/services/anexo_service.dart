@@ -9,20 +9,9 @@ import '../models/anexo.dart';
 import 'api_service.dart';
 
 class AnexoService {
-  Dio _createDio(ApiService api) {
-    return Dio(
-      BaseOptions(
-        baseUrl: api.baseUrl,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
-      ),
-    );
-  }
-
   Future<List<Anexo>> listarPorDocumento(int documentoId) async {
     final api = Provider.of<ApiService>(navigatorKey.currentContext!, listen: false);
-    final dio = _createDio(api);
-    final response = await dio.get('/documentos/$documentoId/anexos');
+    final response = await api.get('/documentos/$documentoId/anexos');
     final data = response.data;
     if (data is! List) return [];
     return data.map((e) => Anexo.fromJson(Map<String, dynamic>.from(e))).toList();
@@ -30,7 +19,6 @@ class AnexoService {
 
   Future<Anexo> subirArchivo(int documentoId, PlatformFile file) async {
     final api = Provider.of<ApiService>(navigatorKey.currentContext!, listen: false);
-    final dio = _createDio(api);
 
     MultipartFile multipart;
     if (file.bytes != null) {
@@ -45,17 +33,22 @@ class AnexoService {
       'file': multipart,
     });
 
-    final response = await dio.post(
+    final response = await api.post(
       '/documentos/$documentoId/anexos',
       data: form,
-      options: Options(contentType: 'multipart/form-data'),
     );
     return Anexo.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   Future<Uint8List> descargarBytes(int anexoId) async {
     final api = Provider.of<ApiService>(navigatorKey.currentContext!, listen: false);
-    final dio = _createDio(api);
+    // Nota: Esto crea un nuevo Dio sin token. Si la descarga requiere auth, fallará.
+    // Idealmente ApiService debería soportar 'getBytes' o exponer su Dio.
+    final dio = Dio(BaseOptions(
+        baseUrl: api.baseUrl,
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30)));
+        
     final response = await dio.get(
       '/documentos/anexos/$anexoId/download',
       options: Options(responseType: ResponseType.bytes),

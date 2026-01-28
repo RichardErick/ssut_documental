@@ -73,6 +73,8 @@ class CreateCarpetaDTO {
   final String gestion;
   final String? descripcion;
   final int? carpetaPadreId;
+  final int? rangoInicio;
+  final int? rangoFin;
 
   CreateCarpetaDTO({
     required this.nombre,
@@ -80,6 +82,8 @@ class CreateCarpetaDTO {
     required this.gestion,
     this.descripcion,
     this.carpetaPadreId,
+    this.rangoInicio,
+    this.rangoFin,
   });
 
   Map<String, dynamic> toJson() {
@@ -89,6 +93,8 @@ class CreateCarpetaDTO {
       'gestion': gestion,
       'descripcion': descripcion,
       'carpetaPadreId': carpetaPadreId,
+      'rangoInicio': rangoInicio,
+      'rangoFin': rangoFin,
     };
   }
 }

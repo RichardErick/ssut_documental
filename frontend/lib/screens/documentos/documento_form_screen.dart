@@ -3,12 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../models/carpeta.dart';
 import '../../models/documento.dart';
 import '../../services/carpeta_service.dart';
 import '../../services/documento_service.dart';
 import '../../services/usuario_service.dart';
 import '../../services/catalogo_service.dart';
+import '../../services/anexo_service.dart';
 import '../../models/usuario.dart';
 
 class DocumentoFormScreen extends StatefulWidget {
@@ -40,6 +42,17 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
   int? _responsableId;
   int? _carpetaId;
   int _nivelConfidencialidad = 1;
+  PlatformFile? _pickedFile;
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (result != null) {
+      setState(() => _pickedFile = result.files.first);
+    }
+  }
 
   // Listas para dropdowns (simuladas por ahora, idealmente cargar de servicios)
   // En una app real, cargaríamos TiposDocumento y Areas de sus servicios
@@ -143,6 +156,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
       
       if (widget.documento == null) {
         // Crear
+        // Crear
         final dto = CreateDocumentoDTO(
           numeroCorrelativo: _numeroCorrelativoController.text,
           tipoDocumentoId: _tipoDocumentoId!,
@@ -155,7 +169,13 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
           carpetaId: _carpetaId,
           nivelConfidencialidad: _nivelConfidencialidad,
         );
-        await documentoService.create(dto);
+        final newDoc = await documentoService.create(dto);
+        
+        if (_pickedFile != null) {
+          final anexoService = Provider.of<AnexoService>(context, listen: false);
+          await anexoService.subirArchivo(newDoc.id, _pickedFile!);
+        }
+
         if (mounted) {
           _showSnack('Documento creado con exito', background: Colors.green);
           Navigator.pop(context, true);
@@ -175,6 +195,12 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
           nivelConfidencialidad: _nivelConfidencialidad,
         );
         await documentoService.update(widget.documento!.id, dto);
+        
+        if (_pickedFile != null) {
+          final anexoService = Provider.of<AnexoService>(context, listen: false);
+          await anexoService.subirArchivo(widget.documento!.id, _pickedFile!);
+        }
+
         if (mounted) {
           _showSnack('Documento actualizado con exito', background: Colors.green);
           Navigator.pop(context, true);
@@ -447,6 +473,58 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
                   TextFormField(
                     controller: _ubicacionFisicaController,
                     decoration: _inputDecoration('Ubicación Física (Estante, Caja)'),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // SECCION: ADJUNTAR ARCHIVO (Simulada visualmente, funcional con click)
+                  _buildSectionTitle('Archivo Digital'),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: _pickFile,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: _pickedFile != null 
+                            ? Colors.green.withOpacity(0.05) 
+                            : Colors.blue.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _pickedFile != null 
+                             ? Colors.green.shade300 
+                             : Colors.blue.shade300, 
+                          width: 1.5, 
+                          style: BorderStyle.solid
+                        ),
+                        // Dashed border effect simulation can be complex, solid is fine for now
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            _pickedFile != null ? Icons.check_circle_outline : Icons.cloud_upload_outlined,
+                            size: 40,
+                            color: _pickedFile != null ? Colors.green : Colors.blue,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _pickedFile != null 
+                                ? 'Archivo seleccionado: ${_pickedFile!.name}' 
+                                : ' Haz clic para adjuntar PDF',
+                            style: GoogleFonts.poppins(
+                              color: _pickedFile != null ? Colors.green.shade700 : Colors.blue.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (_pickedFile == null)
+                            Text(
+                              '(Opcional) El archivo se subirá al guardar el documento',
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 32),

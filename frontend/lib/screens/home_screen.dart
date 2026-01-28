@@ -12,6 +12,8 @@ import 'admin/permisos_screen.dart';
 import 'admin/roles_permissions_screen.dart';
 import 'admin/users_sync_screen.dart';
 import 'documentos/documentos_list_screen.dart';
+import 'documentos/carpetas_screen.dart';
+import 'documentos/carpeta_form_screen.dart';
 import 'documentos/documento_form_screen.dart';
 import 'movimientos/movimientos_screen.dart';
 import 'notifications_screen.dart';
@@ -431,14 +433,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.only(top: 100),
       color: theme.colorScheme.background,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
+        duration: const Duration(milliseconds: 500),
+        switchInCurve: Curves.easeInOutCubic,
+        switchOutCurve: Curves.easeInOutCubic,
         transitionBuilder: (child, animation) {
+          final slideAnimation = Tween<Offset>(
+            begin: const Offset(0.01, 0),
+            end: Offset.zero,
+          ).animate(animation);
+
           return FadeTransition(
             opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
+            child: SlideTransition(
+              position: slideAnimation,
               child: child,
             ),
           );
@@ -456,32 +463,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       scale: _fabAnimation,
       child: FloatingActionButton.extended(
         heroTag: 'home_fab',
-        onPressed: canCreate 
-          ? () async {
-              final result = await Navigator.push(
+        onPressed: canCreate
+            ? () async {
+              // Navegar a la pantalla de gestión de carpetas (Crear NUEVA)
+              await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => DocumentoFormScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const CarpetaFormScreen(),
+                ),
               );
-              // Refresh documents if we are on the documentos tab
-              if (result == true && _selectedIndex == 0) {
-                 // Recargar la lista de documentos
-                 _documentosKey.currentState?.cargarDocumentos();
-              }
-            } 
-          : () {
+              // Refrescar lista de documentos al volver
+              _documentosKey.currentState?.cargarDocumentos();
+            }
+            : () {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('No tienes el rol suficiente para crear documentos.'),
+                  content: Text(
+                    'No tienes el rol suficiente para gestionar carpetas.',
+                  ),
                   backgroundColor: Colors.orange,
                   duration: Duration(seconds: 2),
                 ),
               );
             },
-        backgroundColor: canCreate ? AppTheme.colorPrimario : Colors.grey.withOpacity(0.5),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        backgroundColor:
+            canCreate ? Colors.amber.shade800 : Colors.grey.withOpacity(0.5),
+        icon: const Icon(Icons.create_new_folder_rounded, color: Colors.white),
         label: Text(
-          'NUEVO DOCUMENTO',
+          'AGREGAR CARPETA',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -499,14 +509,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: theme.colorScheme.surface,
       elevation: 10,
       indicatorColor: theme.colorScheme.primary.withOpacity(0.1),
-      destinations:
-          _navItems.map((item) {
-            return NavigationDestination(
-              icon: Icon(item.icon),
-              selectedIcon: Icon(item.selectedIcon),
-              label: item.label,
-            );
-          }).toList(),
+      destinations: _navItems.map((item) {
+        return NavigationDestination(
+          icon: Icon(item.icon),
+          selectedIcon: Icon(item.selectedIcon),
+          label: item.label,
+        );
+      }).toList(),
     );
   }
 }

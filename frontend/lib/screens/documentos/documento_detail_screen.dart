@@ -109,24 +109,27 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       backgroundColor: theme.colorScheme.surface.withOpacity(0.95),
       appBar: _buildAppBar(doc, theme),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(24.0),
         child:
             isDesktop
                 ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 3,
+                      flex: 4, // Aumentado para dar más espacio a los detalles
                       child: _buildLeftColumn(doc, dateFormat, theme),
                     ),
-                    const SizedBox(width: 32),
-                    Expanded(flex: 2, child: _buildRightColumn(theme)),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      flex: 3,
+                      child: _buildRightColumn(theme),
+                    ),
                   ],
                 )
                 : Column(
                   children: [
                     _buildLeftColumn(doc, dateFormat, theme),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     _buildRightColumn(theme),
                   ],
                 ),
@@ -180,10 +183,8 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildMainInfoCard(doc, theme),
-        const SizedBox(height: 32),
-        _buildGeneralStats(doc, dateFormat, theme),
-        const SizedBox(height: 24),
-        _buildAnexosSection(theme),
+        const SizedBox(height: 16),
+        _buildDescriptionCard(doc, theme),
       ],
     );
   }
@@ -192,15 +193,15 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     return AnimatedCard(
       delay: const Duration(milliseconds: 0),
       child: Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 40,
-              offset: const Offset(0, 20),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
@@ -209,23 +210,25 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                       colors: [
                         AppTheme.colorPrimario,
-                        AppTheme.colorSecundario,
+                        AppTheme.colorSecundario.withOpacity(0.8),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(
                     Icons.description_rounded,
                     color: Colors.white,
-                    size: 40,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,65 +236,127 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                       Text(
                         doc.codigo,
                         style: GoogleFonts.poppins(
-                          fontSize: 32,
+                          fontSize: 20,
                           fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
                         ),
                       ),
                       Text(
                         doc.tipoDocumentoNombre ?? 'TIPO NO DEFINIDO',
                         style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.grey,
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                _buildStatusChip(doc.estado),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildConfidentialityBadge(doc.nivelConfidencialidad),
+                        const SizedBox(width: 8),
+                        _buildStatusChip(doc.estado),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 40),
+            const Divider(height: 24, thickness: 1),
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 3,
+              childAspectRatio: 4.5,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 16,
               children: [
                 _buildMiniInfo(
-                  'Correlativo',
+                  'Número Correlativo',
                   doc.numeroCorrelativo,
                   Icons.tag_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Área Origen',
+                  'Área de Origen',
                   doc.areaOrigenNombre ?? 'N/A',
-                  Icons.location_on_rounded,
+                  Icons.business_center_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Gestión',
+                  'Gestión / Año',
                   doc.gestion,
                   Icons.calendar_today_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Responsable',
-                  doc.responsableNombre ?? 'No asignado',
-                  Icons.person_rounded,
+                  'Responsable Asignado',
+                  doc.responsableNombre ?? 'Sin asignar',
+                  Icons.person_pin_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Carpeta',
+                  'Carpeta de Archivo',
                   doc.carpetaNombre ?? 'Sin carpeta',
-                  Icons.folder_shared_rounded,
+                  Icons.inventory_2_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Ubicación Fís.',
+                  'Ubicación Física',
                   doc.ubicacionFisica ?? 'No registrada',
                   Icons.shelves,
+                  theme,
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompactQR(String data) {
+    return Tooltip(
+      message: 'Código QR de validación',
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
+        ),
+        child: QrImageView(
+          data: data,
+          version: QrVersions.auto,
+          size: 60.0,
+          eyeStyle: QrEyeStyle(
+            eyeShape: QrEyeShape.square,
+            color: AppTheme.colorPrimario,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQrButton() {
+    return ElevatedButton(
+      onPressed: _isGeneratingQr ? null : _generateQr,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        _isGeneratingQr ? '...' : 'Generar QR',
+        style: const TextStyle(fontSize: 10),
       ),
     );
   }
@@ -539,29 +604,59 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     );
   }
 
-  Widget _buildMiniInfo(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey),
-        const SizedBox(width: 12),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+  Widget _buildMiniInfo(
+    String label,
+    String value,
+    IconData icon,
+    ThemeData theme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
             ),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -587,47 +682,125 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     );
   }
 
-  Widget _buildGeneralStats(
-    Documento doc,
-    DateFormat dateFormat,
-    ThemeData theme,
-  ) {
+  Widget _buildDescriptionCard(Documento doc, ThemeData theme) {
     return AnimatedCard(
       delay: const Duration(milliseconds: 200),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'DESCRIPCIÓN',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.withOpacity(0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.notes_rounded,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'DESCRIPCIÓN Y DETALLES',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: Colors.grey.shade700,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    doc.descripcion ?? 'Sin descripción adicional.',
-                    style: GoogleFonts.inter(fontSize: 15, height: 1.5),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              doc.descripcion ?? 'Sin descripción adicional registrada.',
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                height: 1.6,
+                color: Colors.black87,
               ),
             ),
+            if (doc.palabrasClave.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: doc.palabrasClave.map((tag) => _buildKeywordChip(tag, theme)).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKeywordChip(String label, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+      ),
+      child: Text(
+        '#$label',
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfidentialityBadge(int level) {
+    Color color;
+    String text;
+    switch (level) {
+      case 3:
+        color = Colors.red.shade700;
+        text = 'CRÍTICO';
+        break;
+      case 2:
+        color = Colors.orange.shade700;
+        text = 'RESERVADO';
+        break;
+      default:
+        color = Colors.blue.shade700;
+        text = 'PÚBLICO';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lock_outline_rounded, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
           ),
-          const SizedBox(width: 24),
-          if (_qrData != null)
-            _buildQRCode(_qrData!, theme)
-          else
-            _buildQrPlaceholder(theme),
         ],
       ),
     );
@@ -825,73 +998,147 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'VISUALIZACIÓN DEL DOCUMENTO',
-          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.visibility_rounded, 
+                size: 20, 
+                color: theme.colorScheme.primary
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'VISUALIZACIÓN',
+              style: GoogleFonts.poppins(
+                fontSize: 14, 
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.0,
+                color: Colors.black87,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         hasPreview
             ? _buildPdfPreview(theme)
             : _buildAttachDocumentPlaceholder(theme),
+        const SizedBox(height: 16),
+        _buildQrCard(widget.documento, theme),
       ],
     );
   }
 
   Widget _buildAttachDocumentPlaceholder(ThemeData theme) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.15)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.upload_file_rounded,
-            size: 48,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Adjunta el PDF del comprobante para generar la vista previa',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade700),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return InkWell(
+          onTap: _isUploadingAnexo ? null : _pickAndUploadAnexo,
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
             width: double.infinity,
-            height: 54,
-            child: ElevatedButton(
-              onPressed: _isUploadingAnexo ? null : _pickAndUploadAnexo,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.3),
+                width: 2,
+                style: BorderStyle.solid,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withOpacity(0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 180),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.cloud_upload_rounded,
+                        size: constraints.maxWidth < 400 ? 40 : 56,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Subir Documento Digital',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: constraints.maxWidth < 400 ? 16 : 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Arrastra tu PDF aquí o haz clic',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: constraints.maxWidth < 400 ? 12 : 14,
+                        color: Colors.grey.shade600,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    if (_isUploadingAnexo)
+                      Column(
+                        children: [
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Subiendo...',
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700),
+                          )
+                        ],
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: _pickAndUploadAnexo,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.folder_open_rounded, size: 18),
+                        label: Text(
+                          'Examinar',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              child:
-                  _isUploadingAnexo
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                      : Text(
-                        'Adjuntar PDF',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                      ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1214,5 +1461,77 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  Widget _buildQrCard(Documento doc, ThemeData theme) {
+    if (_qrData == null) return const SizedBox.shrink();
+    return AnimatedCard(
+      delay: const Duration(milliseconds: 100),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withOpacity(0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+             QrImageView(
+              data: _qrData!,
+              version: QrVersions.auto,
+              size: 80.0,
+              eyeStyle: QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: AppTheme.colorPrimario,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CÓDIGO QR',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _qrData!,
+                      style: GoogleFonts.robotoMono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Autenticidad del documento',
+                    style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

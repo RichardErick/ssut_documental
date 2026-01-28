@@ -14,6 +14,7 @@ import '../../widgets/loading_shimmer.dart';
 import 'documento_detail_screen.dart';
 import 'documento_form_screen.dart';
 import 'carpetas_screen.dart';
+import 'carpeta_form_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user_role.dart';
 
@@ -26,13 +27,17 @@ class DocumentosListScreen extends StatefulWidget {
 
 class DocumentosListScreenState extends State<DocumentosListScreen>
     with AutomaticKeepAliveClientMixin {
+  Carpeta? get carpetaSeleccionada => _carpetaSeleccionada;
+
   List<Documento> _documentos = [];
   List<Documento> _documentosCarpeta = [];
   List<Carpeta> _carpetas = [];
   bool _estaCargando = true;
   bool _estaCargandoCarpetas = true;
   bool _estaCargandoDocumentosCarpeta = false;
+  List<Carpeta> _subcarpetas = [];
   Carpeta? _carpetaSeleccionada;
+  bool _estaCargandoSubcarpetas = false;
   bool _vistaGrid = true;
   String _consultaBusqueda = '';
   String _filtroSeleccionado = 'todos';
@@ -129,12 +134,38 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     }
   }
 
+  Future<void> _cargarSubcarpetas(int padreId) async {
+    setState(() => _estaCargandoSubcarpetas = true);
+    try {
+      final service = Provider.of<CarpetaService>(context, listen: false);
+      final subcarpetas = await service.getAll(gestion: DateTime.now().year.toString());
+      // Filtrar manualmente si el backend no soporta filtro por padreId en getAll
+      // Asumimos que getAll trae todo o filtramos en memoria por ahora
+      if (mounted) {
+        setState(() {
+          _subcarpetas = subcarpetas.where((c) => c.carpetaPadreId == padreId).toList();
+          _estaCargandoSubcarpetas = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _estaCargandoSubcarpetas = false);
+        // No mostramos error bloqeante por subcarpetas
+      }
+    }
+  }
+
   Future<void> _abrirCarpeta(Carpeta carpeta) async {
     setState(() {
       _carpetaSeleccionada = carpeta;
       _documentosCarpeta = [];
+      _subcarpetas = [];
     });
-    await _cargarDocumentosCarpeta(carpeta.id);
+    // Cargar documentos y subcarpetas en paralelo
+    await Future.wait([
+      _cargarDocumentosCarpeta(carpeta.id),
+      _cargarSubcarpetas(carpeta.id),
+    ]);
   }
 
   List<Documento> get _documentosFiltrados {
@@ -382,57 +413,60 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
-                    if (nroLine != null)
-                      Text(
-                        nroLine,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
-                    if (romanoLine != null)
-                      Text(
-                        romanoLine,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
-                    if (rangoLine != null)
-                      Text(
-                        rangoLine,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
                   ],
                 ),
               ),
+              // Botón de Acción Condicional
+              if (carpeta.carpetaPadreId == null)
+                ElevatedButton.icon(
+                  onPressed: () => _crearSubcarpeta(carpeta.id), // Nueva función
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber.shade800,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                  label: const Text('Crear Subcarpeta'),
+                )
+              else
+                ElevatedButton.icon(
+                  onPressed: () => _abrirDocumentoEnCarpeta(carpeta),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.note_add_outlined, size: 18),
+                  label: const Text('Nuevo Documento'),
+                ),
               const SizedBox(width: 8),
             ],
           ),
         ),
-        if (_canCreateDocument())
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton.icon(
-                onPressed: () => _abrirDocumentoEnCarpeta(carpeta),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Agregar documento en esta carpeta'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
+        
+        // Vista de Subcarpetas (si existen)
+        if (_estaCargandoSubcarpetas)
+          const LinearProgressIndicator(minHeight: 2)
+        else if (_subcarpetas.isNotEmpty)
+          Container(
+            height: 140, // Altura fija para scroll horizontal horizontal
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _subcarpetas.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final sub = _subcarpetas[index];
+                return _buildSubcarpetaCard(sub, theme);
+              },
             ),
           ),
+
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Row(
@@ -584,7 +618,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   ),
                 ),
                 Text(
-                  'N? ${d.numeroCorrelativo}',
+                  'Nº ${d.numeroCorrelativo}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -643,50 +677,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              // Botón Gestionar Carpetas
-              Container(
-                height: 54,
-                width: 54,
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.folder_shared_rounded,
-                    color: Colors.amber.shade800,
-                  ),
-                  tooltip: 'Gestionar Carpetas',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CarpetasScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Botón Nueva Carpeta Directa
-              Container(
-                height: 54,
-                width: 54,
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.amber.shade200),
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.create_new_folder_rounded,
-                    color: Colors.amber.shade900,
-                  ),
-                  tooltip: 'Nueva Carpeta Pública',
-                  onPressed: _abrirNuevaCarpeta,
-                ),
-              ),
-              const SizedBox(width: 8),
               _buildFilterButton(theme),
             ],
           ),
@@ -859,9 +849,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       tween: Tween(begin: 0.0, end: 1.0),
       curve: Curves.easeOutBack,
       builder: (context, value, child) {
+        final clampedValue = value.clamp(0.0, 1.0);
         return Transform.scale(
-          scale: 0.9 + (0.1 * value),
-          child: Opacity(opacity: value, child: child),
+          scale: 0.9 + (0.1 * clampedValue),
+          child: Opacity(opacity: clampedValue, child: child),
         );
       },
       child: Container(
@@ -905,13 +896,17 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                           size: 22,
                         ),
                       ),
-                      const Spacer(),
-                      _buildCardHeader(doc, theme),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCardHeader(doc, theme),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     doc.codigo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -943,7 +938,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
   Widget _buildCardHeader(Documento doc, ThemeData theme) {
     final color = _obtenerColorEstado(doc.estado);
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Container(
           padding: const EdgeInsets.all(10),
@@ -957,19 +952,24 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
             size: 20,
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            doc.estado.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: color,
-              letterSpacing: 0.5,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              doc.estado.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: color,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),
@@ -986,11 +986,15 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
           color: theme.colorScheme.onSurface.withOpacity(0.4),
         ),
         const SizedBox(width: 6),
-        Text(
-          _formatearFecha(doc.fechaRegistro),
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+        Flexible(
+          child: Text(
+            _formatearFecha(doc.fechaRegistro),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
+            ),
           ),
         ),
         const Spacer(),
@@ -1101,6 +1105,57 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  Future<void> _crearSubcarpeta(int padreId) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CarpetaFormScreen(padreId: padreId),
+      ),
+    );
+    if (result == true) {
+      _cargarSubcarpetas(padreId);
+      _cargarCarpetas();
+    }
+  }
+
+  Widget _buildSubcarpetaCard(Carpeta sub, ThemeData theme) {
+    return InkWell(
+      onTap: () => _abrirCarpeta(sub),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 140,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue.shade100),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.folder_shared_rounded, color: Colors.blue, size: 32),
+            const Spacer(),
+            Text(
+              sub.nombre,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 14, 
+                fontWeight: FontWeight.w600,
+                color: Colors.blue.shade900
+              ),
+            ),
+            if (sub.rangoInicio != null && sub.rangoFin != null)
+              Text(
+                'Rango ${sub.rangoInicio} - ${sub.rangoFin}',
+                style: const TextStyle(fontSize: 10, color: Colors.blueGrey),
+              ),
+          ],
+        ),
       ),
     );
   }
