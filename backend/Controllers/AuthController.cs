@@ -137,8 +137,11 @@ public class AuthController : ControllerBase
         if (usuario == null)
             return Unauthorized(new { message = "Credenciales inválidas" });
 
-        // Bloquear usuarios que aún no fueron aprobados por un administrador
-        if (!usuario.Activo)
+        // Bloquear usuarios que aún no fueron aprobados por un administrador,
+        // EXCEPTO el Administrador del sistema (puede entrar siempre)
+        if (!usuario.Activo &&
+            usuario.Rol != UsuarioRol.Administrador &&
+            usuario.Rol != UsuarioRol.AdministradorSistema)
         {
             return Unauthorized(new { message = "Su cuenta está pendiente de aprobación por un administrador." });
         }
