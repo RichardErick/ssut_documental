@@ -251,7 +251,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                               value: a.id,
                               child: Text(a.nombre),
                             ),
-                          ),
+                          ).toList(),
                         ],
                         onChanged: (v) => setStateDialog(() => areaId = v),
                       ),

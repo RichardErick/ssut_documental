@@ -35,6 +35,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
 
+  // Helper getter for AuthProvider
+  AuthProvider get authProvider => Provider.of<AuthProvider>(context, listen: false);
+
   // GlobalKey para poder refrescar DocumentosListScreen
   final GlobalKey<DocumentosListScreenState> _documentosKey = GlobalKey<DocumentosListScreenState>();
 
