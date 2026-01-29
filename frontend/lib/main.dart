@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
@@ -13,6 +14,10 @@ import 'services/movimiento_service.dart';
 import 'services/reporte_service.dart';
 import 'services/sync_service.dart';
 import 'services/usuario_service.dart';
+import 'services/carpeta_service.dart';
+import 'services/catalogo_service.dart';
+import 'services/anexo_service.dart';
+import 'services/permiso_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -50,6 +55,12 @@ class MyApp extends StatelessWidget {
         Provider(create: (_) => MovimientoService()),
         Provider(create: (_) => ReporteService()),
         Provider(create: (_) => UsuarioService()),
+        Provider(create: (_) => CarpetaService()),
+        Provider(create: (_) => CatalogoService()),
+        Provider(create: (_) => AnexoService()),
+        ProxyProvider<ApiService, PermisoService>(
+          update: (_, api, __) => PermisoService(api),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

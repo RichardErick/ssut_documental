@@ -62,16 +62,32 @@ public class Documento
     [ForeignKey("ResponsableId")]
     public virtual Usuario? Responsable { get; set; }
 
-    [Column("codigo_qr")]
-    [StringLength(255)]
+    [Column("codigo_qr", TypeName = "text")]
     public string? CodigoQR { get; set; }
+
+    [Column("url_qr")]
+    [StringLength(500)]
+    public string? UrlQR { get; set; }
+
+    [Column("id_documento")]
+    [StringLength(100)]
+    public string? IdDocumento { get; set; }
+
+    [Column("carpeta_id")]
+    public int? CarpetaId { get; set; }
+
+    [ForeignKey("CarpetaId")]
+    public virtual Carpeta? Carpeta { get; set; }
 
     [Column("ubicacion_fisica")]
     [StringLength(200)]
     public string? UbicacionFisica { get; set; }
 
     [Column("estado")]
-    public string Estado { get; set; } = "Activo"; // Activo, Inactivo, Archivado, Eliminado
+    public EstadoDocumento Estado { get; set; } = EstadoDocumento.Activo;
+
+    [Column("activo")]
+    public bool Activo { get; set; } = true;
 
     [Column("nivel_confidencialidad")]
     [Range(1, 5, ErrorMessage = "El nivel de confidencialidad debe estar entre 1 y 5")]
@@ -91,5 +107,6 @@ public class Documento
     public virtual ICollection<Anexo> Anexos { get; set; } = new List<Anexo>();
     public virtual ICollection<HistorialDocumento> HistorialDocumentos { get; set; } = new List<HistorialDocumento>();
     public virtual ICollection<Alerta> Alertas { get; set; } = new List<Alerta>();
+    public virtual ICollection<DocumentoPalabraClave> DocumentoPalabrasClaves { get; set; } = new List<DocumentoPalabraClave>();
 }
 

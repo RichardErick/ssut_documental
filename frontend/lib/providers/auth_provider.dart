@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
@@ -42,9 +43,19 @@ class AuthProvider extends ChangeNotifier {
     return true;
   }
 
+  DateTime? get lockoutEndTime => _lockoutEndTime;
+
   Duration get remainingLockoutTime {
     if (_lockoutEndTime == null) return Duration.zero;
     return _lockoutEndTime!.difference(DateTime.now());
+  }
+
+  List<String> _permissions = [];
+  List<String> get permissions => _permissions;
+
+  bool hasPermission(String permissionCode) {
+    // ESTRICTO: Solo si tienen el permiso en la lista
+    return _permissions.contains(permissionCode);
   }
 
   AuthProvider() {
@@ -60,6 +71,7 @@ class AuthProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         final roleString = prefs.getString('user_role');
         final userDataString = prefs.getString('user_data');
+        final permissionsString = prefs.getString('user_permissions');
 
         if (roleString != null) {
           _role = _parseRole(roleString);
@@ -82,6 +94,15 @@ class AuthProvider extends ChangeNotifier {
             _user = {'nombreUsuario': username};
           }
         }
+
+        if (permissionsString != null) {
+           try {
+             _permissions = List<String>.from(jsonDecode(permissionsString));
+           } catch (_) {
+             _permissions = [];
+           }
+        }
+
         _isAuthenticated = true;
 
         // Configurar header Authorization si ya hay contexto
@@ -124,6 +145,7 @@ class AuthProvider extends ChangeNotifier {
       final data = response.data as Map<String, dynamic>;
       final token = data['token'] as String?;
       final user = data['user'] as Map<String, dynamic>?;
+      final permisosList = data['permisos'] as List?;
 
       if (token == null || user == null) {
         throw Exception('Respuesta inválida del servidor');
@@ -133,6 +155,12 @@ class AuthProvider extends ChangeNotifier {
       _token = token;
       _isAuthenticated = true;
       _user = user;
+      
+      if (permisosList != null) {
+        _permissions = permisosList.map((e) => e.toString()).toList();
+      } else {
+        _permissions = [];
+      }
 
       final roleString = (user['rol'] as String?) ?? 'Invitado';
       _role = _parseRole(roleString);
@@ -143,6 +171,7 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setString('user_data', jsonEncode(_user));
       await prefs.setString('user_role', roleString);
       await prefs.setString('user_name', username);
+      await prefs.setString('user_permissions', jsonEncode(_permissions));
 
       await _secureStorage.write(key: 'auth_token', value: _token!);
 
@@ -156,6 +185,42 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _failedAttempts++;
+
+      // Handle server-side lockout (HTTP 423)
+      if (e is DioException && e.response?.statusCode == 423) {
+        // Intentar leer los segundos de bloqueo desde el backend (preferir campo numérico)
+        try {
+          final data = e.response?.data;
+          if (data is Map<String, dynamic>) {
+            final seconds = data['remainingSeconds'];
+            if (seconds is int) {
+              _lockoutEndTime = DateTime.now().add(Duration(seconds: seconds));
+            } else if (seconds is num) {
+              _lockoutEndTime = DateTime.now().add(
+                Duration(seconds: seconds.toInt()),
+              );
+            } else {
+              final message = data['message']?.toString() ?? '';
+              final regex = RegExp(r'(\d+)\s*segundos');
+              final match = regex.firstMatch(message);
+              if (match != null) {
+                final parsedSeconds = int.parse(match.group(1)!);
+                _lockoutEndTime = DateTime.now().add(
+                  Duration(seconds: parsedSeconds),
+                );
+              } else {
+                _lockoutEndTime = DateTime.now().add(
+                  const Duration(seconds: 30),
+                );
+              }
+            }
+          } else {
+            _lockoutEndTime = DateTime.now().add(const Duration(seconds: 30));
+          }
+        } catch (_) {
+          _lockoutEndTime = DateTime.now().add(const Duration(seconds: 30));
+        }
+      }
 
       _auditService?.logEvent(
         action: 'LOGIN_FAILED',
@@ -180,6 +245,7 @@ class AuthProvider extends ChangeNotifier {
     _isAuthenticated = false;
     _token = null;
     _user = null;
+    _permissions = [];
 
     try {
       final apiService = Provider.of<ApiService>(
@@ -193,6 +259,7 @@ class AuthProvider extends ChangeNotifier {
     await prefs.remove('user_data');
     await prefs.remove('user_role');
     await prefs.remove('user_name');
+    await prefs.remove('user_permissions');
 
     // Eliminar token del almacenamiento seguro
     await _secureStorage.delete(key: 'auth_token');

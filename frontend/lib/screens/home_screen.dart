@@ -12,10 +12,15 @@ import 'admin/permisos_screen.dart';
 import 'admin/roles_permissions_screen.dart';
 import 'admin/users_sync_screen.dart';
 import 'documentos/documentos_list_screen.dart';
+import 'documentos/carpetas_screen.dart';
+import 'documentos/carpeta_form_screen.dart';
+import 'documentos/documento_form_screen.dart';
 import 'movimientos/movimientos_screen.dart';
 import 'notifications_screen.dart';
 import 'qr/qr_scanner_screen.dart';
 import 'reportes/reportes_screen.dart';
+import 'profile_screen.dart';
+import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +35,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
 
+  // Helper getter for AuthProvider
+  AuthProvider get authProvider => Provider.of<AuthProvider>(context, listen: false);
+
+  // GlobalKey para poder refrescar DocumentosListScreen
+  final GlobalKey<DocumentosListScreenState> _documentosKey = GlobalKey<DocumentosListScreenState>();
+
   List<NavigationItem> _navItems = [];
 
   @override
@@ -43,10 +54,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     _navItems = [
       NavigationItem(
-        label: 'Documentos',
-        icon: Icons.description_outlined,
-        selectedIcon: Icons.description,
-        screen: const DocumentosListScreen(),
+        label: 'Carpetas',
+        icon: Icons.folder_outlined,
+        selectedIcon: Icons.folder,
+        screen: DocumentosListScreen(key: _documentosKey),
       ),
       NavigationItem(
         label: 'Movimientos',
@@ -56,8 +67,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     ];
 
-    if (role == UserRole.administradorSistema ||
-        role == UserRole.administradorDocumentos) {
+    // Acceso a reportes si tiene permiso de ver documentos (todos) o gestionar seguridad
+    if (authProvider.hasPermission('ver_documento') || authProvider.hasPermission('gestionar_seguridad')) {
       _navItems.add(
         NavigationItem(
           label: 'Reportes',
@@ -68,7 +79,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    if (role == UserRole.administradorSistema) {
+    // Verificación de permiso para módulos de administración
+    if (authProvider.hasPermission('gestionar_seguridad')) {
       _navItems.add(
         NavigationItem(
           label: 'Roles y Permisos',
@@ -89,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         NavigationItem(
           label: 'Sincronización',
           icon:
-              Icons.sync_problem_outlined, // Using similar icon as placeholder
+              Icons.sync_problem_outlined,
           selectedIcon: Icons.sync,
           screen: const UsersSyncScreen(),
         ),
@@ -106,6 +118,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  int _unreadNotifications = 0;
+  bool _isDisposed = false;
+
   @override
   void initState() {
     super.initState();
@@ -118,12 +133,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.elasticOut,
     );
     _fabController.forward();
+    _fetchUnreadCount();
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     _fabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    if (_isDisposed) return;
+    try {
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      final response = await apiService.get('/alertas/unread-count');
+      if (mounted) {
+        setState(() {
+          _unreadNotifications = response.data['count'] ?? 0;
+        });
+      }
+    } catch (_) {}
+    
+    // Poll every 30 seconds
+    Future.delayed(const Duration(seconds: 30), _fetchUnreadCount);
   }
 
   void _onItemSelected(int index) {
@@ -207,11 +240,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             actions: [
               _buildActionIcon(Icons.search, 'Búsqueda Global', theme),
               const SizedBox(width: 12),
-              _buildActionIcon(
-                Icons.notifications_none_rounded,
-                'Notificaciones',
-                theme,
-              ),
+              _buildNotificationBadge(theme),
               const SizedBox(width: 12),
               _buildThemeToggle(theme),
               const SizedBox(width: 12),
@@ -221,6 +250,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNotificationBadge(ThemeData theme) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _buildActionIcon(
+          _unreadNotifications > 0 ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+          'Notificaciones',
+          theme,
+        ),
+        if (_unreadNotifications > 0)
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+                border: Border.all(color: theme.colorScheme.surface, width: 2),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Text(
+                '$_unreadNotifications',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -329,6 +397,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         if (value == 'logout') {
           Provider.of<AuthProvider>(context, listen: false).logout();
           Navigator.of(context).pushReplacementNamed('/login');
+        } else if (value == 'profile') {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+          );
         }
       },
       itemBuilder:
@@ -365,14 +437,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.only(top: 100),
       color: theme.colorScheme.background,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
+        duration: const Duration(milliseconds: 500),
+        switchInCurve: Curves.easeInOutCubic,
+        switchOutCurve: Curves.easeInOutCubic,
         transitionBuilder: (child, animation) {
+          final slideAnimation = Tween<Offset>(
+            begin: const Offset(0.01, 0),
+            end: Offset.zero,
+          ).animate(animation);
+
           return FadeTransition(
             opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
+            child: SlideTransition(
+              position: slideAnimation,
               child: child,
             ),
           );
@@ -383,14 +460,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildFAB(ThemeData theme) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final canCreate = authProvider.hasPermission('subir_documento');
+
     return ScaleTransition(
       scale: _fabAnimation,
       child: FloatingActionButton.extended(
-        onPressed: () {},
-        backgroundColor: AppTheme.colorPrimario,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        heroTag: 'home_fab',
+        onPressed: canCreate
+            ? () async {
+              // Navegar a la pantalla de gestión de carpetas (Crear NUEVA)
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CarpetaFormScreen(),
+                ),
+              );
+              // Refrescar lista de documentos al volver
+              _documentosKey.currentState?.cargarDocumentos();
+            }
+            : () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'No tienes el rol suficiente para gestionar carpetas.',
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+        backgroundColor:
+            canCreate ? Colors.amber.shade800 : Colors.grey.withOpacity(0.5),
+        icon: const Icon(Icons.create_new_folder_rounded, color: Colors.white),
         label: Text(
-          'NUEVO DOCUMENTO',
+          'AGREGAR CARPETA',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -408,14 +513,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: theme.colorScheme.surface,
       elevation: 10,
       indicatorColor: theme.colorScheme.primary.withOpacity(0.1),
-      destinations:
-          _navItems.map((item) {
-            return NavigationDestination(
-              icon: Icon(item.icon),
-              selectedIcon: Icon(item.selectedIcon),
-              label: item.label,
-            );
-          }).toList(),
+      destinations: _navItems.map((item) {
+        return NavigationDestination(
+          icon: Icon(item.icon),
+          selectedIcon: Icon(item.selectedIcon),
+          label: item.label,
+        );
+      }).toList(),
     );
   }
 }

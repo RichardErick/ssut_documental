@@ -23,6 +23,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<Permiso> Permisos { get; set; }
     public DbSet<RolPermiso> RolPermisos { get; set; }
     public DbSet<UsuarioPermiso> UsuarioPermisos { get; set; }
+    
+    // Sprint 2: Gestión Documental
+    public DbSet<Carpeta> Carpetas { get; set; }
+    public DbSet<PalabraClave> PalabrasClaves { get; set; }
+    public DbSet<DocumentoPalabraClave> DocumentoPalabrasClaves { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,6 +43,15 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(d => d.FechaDocumento);
             entity.HasIndex(d => d.ResponsableId);
             
+            // Fix: Mapear explícitamente el tipo de columna para el enum de PostgreSQL
+            // Convertir el enum a string para evitar problemas de orden entre PostgreSQL y C#
+            entity.Property(d => d.Estado)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => (EstadoDocumento)Enum.Parse(typeof(EstadoDocumento), v, true)
+                )
+                .HasColumnType("varchar(50)");
+
             // Relaciones
             entity.HasOne(d => d.TipoDocumento)
                 .WithMany(t => t.Documentos)
@@ -78,6 +92,11 @@ public class ApplicationDbContext : DbContext
                 .WithOne(a => a.Documento)
                 .HasForeignKey(a => a.DocumentoId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Carpeta)
+                .WithMany(c => c.Documentos)
+                .HasForeignKey(d => d.CarpetaId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Configuración de Movimiento
@@ -147,11 +166,6 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Anexo>(entity =>
         {
             entity.HasIndex(a => a.DocumentoId);
-            
-            entity.HasOne(a => a.Documento)
-                .WithMany()
-                .HasForeignKey(a => a.DocumentoId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configuración de HistorialDocumento
@@ -159,10 +173,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasIndex(h => h.DocumentoId);
             
-            entity.HasOne(h => h.Documento)
-                .WithMany()
-                .HasForeignKey(h => h.DocumentoId)
-                .OnDelete(DeleteBehavior.Cascade);
+
 
             entity.HasOne(h => h.Usuario)
                 .WithMany()
@@ -205,10 +216,7 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(a => a.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(a => a.Documento)
-                .WithMany(d => d.Alertas)
-                .HasForeignKey(a => a.DocumentoId)
-                .OnDelete(DeleteBehavior.SetNull);
+
 
             entity.HasOne(a => a.Movimiento)
                 .WithMany()
@@ -259,6 +267,51 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(up => up.Permiso)
                 .WithMany()
                 .HasForeignKey(up => up.PermisoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configuración de Carpeta
+        modelBuilder.Entity<Carpeta>(entity =>
+        {
+            entity.HasIndex(c => c.Gestion);
+            entity.HasIndex(c => c.CarpetaPadreId);
+            entity.HasIndex(c => c.Activo);
+            entity.HasIndex(c => new { c.Nombre, c.Gestion, c.CarpetaPadreId }).IsUnique();
+
+            entity.HasOne(c => c.CarpetaPadre)
+                .WithMany(cp => cp.Subcarpetas)
+                .HasForeignKey(c => c.CarpetaPadreId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(c => c.UsuarioCreacion)
+                .WithMany()
+                .HasForeignKey(c => c.UsuarioCreacionId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configuración de PalabraClave
+        modelBuilder.Entity<PalabraClave>(entity =>
+        {
+            entity.HasIndex(pc => pc.Palabra).IsUnique();
+            entity.HasIndex(pc => pc.Activo);
+        });
+
+        // Configuración de DocumentoPalabraClave (relación muchos a muchos)
+        modelBuilder.Entity<DocumentoPalabraClave>(entity =>
+        {
+            entity.HasKey(dpc => new { dpc.DocumentoId, dpc.PalabraClaveId });
+            
+            entity.HasIndex(dpc => dpc.DocumentoId);
+            entity.HasIndex(dpc => dpc.PalabraClaveId);
+
+            entity.HasOne(dpc => dpc.Documento)
+                .WithMany(d => d.DocumentoPalabrasClaves)
+                .HasForeignKey(dpc => dpc.DocumentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(dpc => dpc.PalabraClave)
+                .WithMany(pc => pc.DocumentoPalabrasClaves)
+                .HasForeignKey(dpc => dpc.PalabraClaveId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

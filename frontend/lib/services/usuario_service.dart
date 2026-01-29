@@ -5,13 +5,16 @@ import '../models/usuario.dart';
 import 'api_service.dart';
 
 class UsuarioService {
-  Future<List<Usuario>> getAll() async {
+  Future<List<Usuario>> getAll({bool incluirInactivos = false}) async {
     try {
       final apiService = Provider.of<ApiService>(
         navigatorKey.currentContext!,
         listen: false,
       );
-      final response = await apiService.get('/usuarios');
+      final response = await apiService.get(
+        '/usuarios',
+        queryParameters: {'incluirInactivos': incluirInactivos},
+      );
       return (response.data as List)
           .map((json) => Usuario.fromJson(json))
           .toList();
@@ -58,6 +61,27 @@ class UsuarioService {
       return Usuario.fromJson(response.data);
     } catch (e) {
       print('Error al obtener usuario: $e');
+      rethrow;
+    }
+  }
+
+  Future<Usuario> getCurrent() async {
+    try {
+      final apiService = Provider.of<ApiService>(
+        navigatorKey.currentContext!,
+        listen: false,
+      );
+      final meResponse = await apiService.get('/auth/me');
+      final data = meResponse.data as Map<String, dynamic>;
+      final idRaw = data['id'];
+      final id = idRaw is int ? idRaw : int.tryParse(idRaw?.toString() ?? '');
+      if (id != null) {
+        final response = await apiService.get('/usuarios/$id');
+        return Usuario.fromJson(response.data);
+      }
+      return Usuario.fromJson(data);
+    } catch (e) {
+      print('Error al obtener perfil: $e');
       rethrow;
     }
   }

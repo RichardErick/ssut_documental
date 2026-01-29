@@ -83,13 +83,13 @@ public class DocumentoService : IDocumentoService
             query = query.Where(d => d.Gestion == busqueda.Gestion);
 
         if (busqueda.FechaDesde.HasValue)
-            query = query.Where(d => d.FechaDocumento >= busqueda.FechaDesde.Value);
+            query = query.Where(d => d.FechaDocumento >= DateTime.SpecifyKind(busqueda.FechaDesde.Value, DateTimeKind.Utc));
 
         if (busqueda.FechaHasta.HasValue)
-            query = query.Where(d => d.FechaDocumento <= busqueda.FechaHasta.Value);
+            query = query.Where(d => d.FechaDocumento <= DateTime.SpecifyKind(busqueda.FechaHasta.Value, DateTimeKind.Utc));
 
-        if (!string.IsNullOrEmpty(busqueda.Estado))
-            query = query.Where(d => d.Estado == busqueda.Estado);
+        if (!string.IsNullOrEmpty(busqueda.Estado) && Enum.TryParse<EstadoDocumento>(busqueda.Estado, true, out var estadoEnum))
+            query = query.Where(d => d.Estado == estadoEnum);
 
         if (!string.IsNullOrEmpty(busqueda.CodigoQR))
             query = query.Where(d => d.CodigoQR == busqueda.CodigoQR);
@@ -112,12 +112,12 @@ public class DocumentoService : IDocumentoService
             TipoDocumentoId = dto.TipoDocumentoId,
             AreaOrigenId = dto.AreaOrigenId,
             Gestion = dto.Gestion,
-            FechaDocumento = dto.FechaDocumento,
+            FechaDocumento = DateTime.SpecifyKind(dto.FechaDocumento, DateTimeKind.Utc),
             Descripcion = dto.Descripcion,
             ResponsableId = dto.ResponsableId,
             UbicacionFisica = dto.UbicacionFisica,
             CodigoQR = codigoQR,
-            Estado = "Activo",
+            Estado = EstadoDocumento.Activo,
             FechaRegistro = DateTime.UtcNow,
             FechaActualizacion = DateTime.UtcNow,
         };
@@ -155,8 +155,8 @@ public class DocumentoService : IDocumentoService
         if (!string.IsNullOrEmpty(dto.UbicacionFisica))
             documento.UbicacionFisica = dto.UbicacionFisica;
 
-        if (!string.IsNullOrEmpty(dto.Estado))
-            documento.Estado = dto.Estado;
+        if (!string.IsNullOrEmpty(dto.Estado) && Enum.TryParse<EstadoDocumento>(dto.Estado, true, out var estadoEnum))
+            documento.Estado = estadoEnum;
 
         documento.FechaActualizacion = DateTime.UtcNow;
 
@@ -238,7 +238,7 @@ public class DocumentoService : IDocumentoService
             ResponsableNombre = d.Responsable?.NombreCompleto,
             CodigoQR = d.CodigoQR,
             UbicacionFisica = d.UbicacionFisica,
-            Estado = d.Estado,
+            Estado = d.Estado.ToString(),
             FechaRegistro = d.FechaRegistro
         };
     }

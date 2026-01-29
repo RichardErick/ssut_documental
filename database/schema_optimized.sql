@@ -74,14 +74,14 @@ CREATE TABLE IF NOT EXISTS documentos (
     fecha_documento DATE NOT NULL,
     descripcion TEXT,
     responsable_id INTEGER REFERENCES usuarios(id),
-    codigo_qr VARCHAR(255),
+    codigo_qr TEXT,
     ubicacion_fisica VARCHAR(200),
     estado estado_documento_enum DEFAULT 'Activo',
     nivel_confidencialidad INTEGER DEFAULT 1 CHECK (nivel_confidencialidad BETWEEN 1 AND 5),
     fecha_vencimiento DATE,
     fecha_registro TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT codigo_formato CHECK (codigo ~* '^[A-Z]{2,4}-[0-9]{4}-[0-9]{6}$')
+    CONSTRAINT codigo_formato CHECK (codigo ~* '^[A-Z0-9]{2,10}-[A-Z0-9]{2,10}-[0-9]{4}-[0-9]{4,6}$')
 );
 
 -- Tabla de Movimientos mejorada
@@ -385,8 +385,8 @@ INSERT INTO configuracion (clave, valor, descripcion, tipo_dato) VALUES
 ('notificaciones_email', 'true', 'Activar notificaciones por email', 'boolean')
 ON CONFLICT (clave) DO NOTHING;
 
--- Usuario administrador por defecto (password: admin123 - debe ser hasheado en producción)
+-- Usuario administrador por defecto (password: admin)
 INSERT INTO usuarios (nombre_usuario, nombre_completo, email, password_hash, rol, area_id) VALUES
-('admin', 'Administrador del Sistema', 'admin@ssut.edu.bo', '$2a$11$placeholder_hash_here', 'Administrador', 1),
-('doc_admin', 'Administrador de Documentos', 'docadmin@ssut.edu.bo', '$2a$11$placeholder_hash_here', 'AdministradorDocumentos', 4)
+('admin', 'Administrador del Sistema', 'admin@ssut.edu.bo', 'admin', 'Administrador', 1),
+('doc_admin', 'Administrador de Documentos', 'docadmin@ssut.edu.bo', 'admin', 'AdministradorDocumentos', 4)
 ON CONFLICT (nombre_usuario) DO NOTHING;

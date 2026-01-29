@@ -42,13 +42,18 @@ public class AuthController : ControllerBase
         if (await _context.Usuarios.AnyAsync(u => u.Email == email))
             return BadRequest(new { message = "El email ya está en uso" });
 
+        if (!Enum.TryParse<UsuarioRol>(dto.Rol, true, out var rolEnum))
+        {
+            rolEnum = UsuarioRol.Contador; // Default fallback
+        }
+
         var newUser = new SistemaGestionDocumental.Models.Usuario
         {
             NombreUsuario = username,
             NombreCompleto = dto.NombreCompleto.Trim(),
             Email = email,
             PasswordHash = HashPassword(dto.Password),
-            Rol = UsuarioRol.Contador,
+            Rol = rolEnum,
             Activo = false,
             FechaRegistro = DateTime.UtcNow,
             FechaActualizacion = DateTime.UtcNow
@@ -69,15 +74,15 @@ public class AuthController : ControllerBase
         }
 
         var alertsError = false;
+        var alertsCreated = 0;
 
         try
         {
             // Notify Admins
+            // We search for users with roles that can manage users
             var admins = await _context.Usuarios
-                .Where(u =>
-                    u.Rol == UsuarioRol.Administrador ||
-                    u.Rol == UsuarioRol.AdministradorDocumentos ||
-                    u.Rol.ToString() == "AdministradorSistema")
+                .Where(u => u.Activo)
+                .Where(u => u.Rol == UsuarioRol.Administrador || u.Rol == UsuarioRol.AdministradorDocumentos)
                 .ToListAsync();
 
             foreach (var admin in admins)
@@ -86,28 +91,26 @@ public class AuthController : ControllerBase
                 {
                     UsuarioId = admin.Id,
                     Titulo = "Nuevo Registro de Usuario",
-                    Mensaje = $"Usuario {newUser.NombreCompleto} registrado. Requiere aprobaciA3n.",
+                    Mensaje = $"El usuario {newUser.NombreCompleto} ({newUser.NombreUsuario}) se ha registrado y requiere aprobación para ingresar. (UsuarioId: {newUser.Id})",
                     TipoAlerta = "warning",
                     FechaCreacion = DateTime.UtcNow,
                     Leida = false
                 });
+                alertsCreated++;
             }
 
-            if (admins.Count > 0)
-            {
-                await _context.SaveChangesAsync();
-            }
+            if (admins.Any()) await _context.SaveChangesAsync();
         }
-        catch
+        catch (Exception)
         {
             alertsError = true;
         }
 
         var responseMessage = alertsError
             ? "Registro exitoso. No se pudo notificar a los administradores."
-            : "Registro exitoso. Pendiente de aprobaciA3n.";
+            : "Registro exitoso. Pendiente de aprobación por parte de un administrador.";
 
-        return Ok(new { message = responseMessage });
+        return Ok(new { message = responseMessage, alertsCreated, alertsError });
     }
 
     private string HashPassword(string password)
@@ -134,23 +137,53 @@ public class AuthController : ControllerBase
         if (usuario == null)
             return Unauthorized(new { message = "Credenciales inválidas" });
 
+        // Bloquear usuarios que aún no fueron aprobados por un administrador,
+        // EXCEPTO el Administrador del sistema (puede entrar siempre)
+        if (!usuario.Activo &&
+            usuario.Rol != UsuarioRol.Administrador)
+        {
+            return Unauthorized(new { message = "Su cuenta está pendiente de aprobación por un administrador." });
+        }
+
+        // Verificar si el usuario está bloqueado
         if (usuario.BloqueadoHasta.HasValue && usuario.BloqueadoHasta.Value > DateTime.UtcNow)
         {
-            var remaining = (int)Math.Ceiling((usuario.BloqueadoHasta.Value - DateTime.UtcNow).TotalSeconds);
-            return StatusCode(StatusCodes.Status423Locked, new { message = $"Cuenta bloqueada temporalmente. Intente en {remaining} segundos." });
+            var tiempoRestante = usuario.BloqueadoHasta.Value - DateTime.UtcNow;
+            return StatusCode(423, new 
+            { 
+                message = $"Su cuenta está bloqueada. Intente de nuevo en {Math.Ceiling(tiempoRestante.TotalMinutes)} minutos.",
+                remainingSeconds = (int)tiempoRestante.TotalSeconds
+            });
         }
 
         if (!VerifyPassword(dto.Password, usuario.PasswordHash))
         {
             usuario.IntentosFallidos += 1;
+            usuario.FechaActualizacion = DateTime.UtcNow;
 
-            const int maxIntentos = 5;
-            if (usuario.IntentosFallidos >= maxIntentos)
+            const int maxAttempts = 3;
+            
+            if (usuario.IntentosFallidos >= maxAttempts)
             {
+                // Bloquear por 30 minutos
                 usuario.BloqueadoHasta = DateTime.UtcNow.AddMinutes(30);
+                
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error actualizando estado de bloqueo.", error = ex.Message });
+                }
+
+                return StatusCode(423, new 
+                { 
+                    message = "Se ha excedido el número máximo de intentos. Su cuenta ha sido bloqueada temporalmente por 30 minutos.",
+                    remainingSeconds = 30 * 60
+                });
             }
 
-            usuario.FechaActualizacion = DateTime.UtcNow;
             try
             {
                 await _context.SaveChangesAsync();
@@ -159,12 +192,20 @@ public class AuthController : ControllerBase
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
-                    message = "Error actualizando intentos fallidos en BD. Verifica que la tabla 'usuarios' tenga columnas: intentos_fallidos, bloqueado_hasta, fecha_actualizacion.",
+                    message = "Error actualizando intentos fallidos en BD.",
                     error = ex.Message
                 });
             }
 
-            return Unauthorized(new { message = "Credenciales inválidas" });
+            // Aquí el usuario pide "borrar esa validación", pero no podemos permitir entrar con contraseña mal.
+            // Lo más probable es que quiera que se note que se está bloqueando.
+            // Retornamos Unauthorized pero con el contador.
+            return Unauthorized(new
+            {
+                message = "Credenciales inválidas. Tenga cuidado, su cuenta se bloqueará si excede los intentos.",
+                failedAttempts = usuario.IntentosFallidos,
+                remainingAttempts = maxAttempts - usuario.IntentosFallidos
+            });
         }
 
         usuario.IntentosFallidos = 0;
@@ -186,6 +227,29 @@ public class AuthController : ControllerBase
 
         var token = GenerateJwt(usuario);
 
+        // Obtener permisos efectivos
+        var roleName = usuario.Rol.ToString();
+        var normalizedRole = roleName == "Administrador" ? "AdministradorSistema" : roleName;
+
+        var permisosRol = await _context.RolPermisos
+            .Where(rp => rp.Rol == normalizedRole && rp.Activo)
+            .Select(rp => rp.Permiso.Codigo)
+            .ToListAsync();
+
+        var permisosUsuario = await _context.UsuarioPermisos
+            .Where(up => up.UsuarioId == usuario.Id && up.Activo)
+            .Select(up => new { up.Permiso.Codigo, up.Denegado })
+            .ToListAsync();
+
+        var granted = permisosUsuario.Where(p => !p.Denegado).Select(p => p.Codigo);
+        var denied = permisosUsuario.Where(p => p.Denegado).Select(p => p.Codigo).ToHashSet();
+
+        var effectivePermissions = permisosRol
+            .Where(p => !denied.Contains(p))
+            .Union(granted)
+            .Distinct()
+            .ToList();
+
         return Ok(new
         {
             token,
@@ -198,7 +262,8 @@ public class AuthController : ControllerBase
                 usuario.Rol,
                 usuario.AreaId,
                 usuario.Activo
-            }
+            },
+            permisos = effectivePermissions
         });
     }
 
@@ -358,6 +423,7 @@ public class RegisterRequest
     public string Password { get; set; } = string.Empty;
     public string NombreCompleto { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string Rol { get; set; } = "Contador";
 }
 
 public class LoginRequest

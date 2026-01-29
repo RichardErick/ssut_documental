@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../models/anexo.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/documento.dart';
-import '../../models/movimiento.dart';
-import '../../services/movimiento_service.dart';
+import '../../services/anexo_service.dart';
+import '../../services/documento_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/animated_card.dart';
@@ -22,29 +31,70 @@ class DocumentoDetailScreen extends StatefulWidget {
 }
 
 class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
-  List<Movimiento> _movimientos = [];
-  bool _isLoadingMovimientos = true;
+  String? _qrData;
+  bool _isGeneratingQr = false;
+  List<Anexo> _anexos = [];
+  bool _isLoadingAnexos = false;
+  bool _isUploadingAnexo = false;
+  Uint8List? _previewPdfBytes;
+  String? _previewFileName;
+  bool _anexosLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadMovimientos();
+    _qrData = _normalizeQrData(
+      widget.documento.urlQR ?? widget.documento.codigoQR,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _qrData == null) {
+        _generateQr();
+      }
+    });
   }
 
-  Future<void> _loadMovimientos() async {
-    if (!mounted) return;
-    setState(() => _isLoadingMovimientos = true);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_anexosLoaded) {
+      _anexosLoaded = true;
+      _loadAnexos();
+    }
+  }
+
+  String? _normalizeQrData(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _generateQr() async {
+    if (_isGeneratingQr) return;
+    setState(() => _isGeneratingQr = true);
     try {
-      final service = Provider.of<MovimientoService>(context, listen: false);
-      final movimientos = await service.getByDocumentoId(widget.documento.id);
+      final service = Provider.of<DocumentoService>(context, listen: false);
+      final response = await service.generarQR(widget.documento.id);
+      final qrContent =
+          response['qrContent'] ??
+          response['QrContent'] ??
+          widget.documento.urlQR ??
+          widget.documento.codigoQR;
       if (mounted) {
-        setState(() {
-          _movimientos = movimientos;
-          _isLoadingMovimientos = false;
-        });
+        setState(() => _qrData = _normalizeQrData(qrContent?.toString()));
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingMovimientos = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorHelper.getErrorMessage(e)),
+            backgroundColor: AppTheme.colorError,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingQr = false);
+      }
     }
   }
 
@@ -60,28 +110,28 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       backgroundColor: theme.colorScheme.surface.withOpacity(0.95),
       appBar: _buildAppBar(doc, theme),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(24.0),
         child:
             isDesktop
                 ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 3,
+                      flex: 4, // Aumentado para dar más espacio a los detalles
                       child: _buildLeftColumn(doc, dateFormat, theme),
                     ),
-                    const SizedBox(width: 32),
+                    const SizedBox(width: 24),
                     Expanded(
-                      flex: 2,
-                      child: _buildRightColumn(dateFormat, theme),
+                      flex: 3,
+                      child: _buildRightColumn(theme),
                     ),
                   ],
                 )
                 : Column(
                   children: [
                     _buildLeftColumn(doc, dateFormat, theme),
-                    const SizedBox(height: 32),
-                    _buildRightColumn(dateFormat, theme),
+                    const SizedBox(height: 24),
+                    _buildRightColumn(theme),
                   ],
                 ),
       ),
@@ -97,13 +147,33 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
         style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 18),
       ),
       actions: [
+        if (Provider.of<AuthProvider>(context).hasPermission('borrar_documento'))
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded),
+            onPressed: () => _confirmarEliminarDocumento(doc),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.red.shade50,
+              foregroundColor: Colors.red.shade700,
+            ),
+            tooltip: 'Eliminar documento',
+          ),
+        const SizedBox(width: 8),
         IconButton(
-          icon: const Icon(Icons.edit_rounded),
-          onPressed: () {},
+          icon: const Icon(Icons.print_rounded),
+          onPressed: _printDocumento,
           style: IconButton.styleFrom(
             backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
           ),
         ),
+        const SizedBox(width: 8),
+        if (Provider.of<AuthProvider>(context).hasPermission('editar_metadatos'))
+          IconButton(
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: () {},
+            style: IconButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+            ),
+          ),
         const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.share_rounded),
@@ -126,8 +196,8 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildMainInfoCard(doc, theme),
-        const SizedBox(height: 32),
-        _buildGeneralStats(doc, dateFormat, theme),
+        const SizedBox(height: 16),
+        _buildDescriptionCard(doc, theme),
       ],
     );
   }
@@ -136,15 +206,15 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     return AnimatedCard(
       delay: const Duration(milliseconds: 0),
       child: Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 40,
-              offset: const Offset(0, 20),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
@@ -153,23 +223,25 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                       colors: [
                         AppTheme.colorPrimario,
-                        AppTheme.colorSecundario,
+                        AppTheme.colorSecundario.withOpacity(0.8),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(
                     Icons.description_rounded,
                     color: Colors.white,
-                    size: 40,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,55 +249,414 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                       Text(
                         doc.codigo,
                         style: GoogleFonts.poppins(
-                          fontSize: 32,
+                          fontSize: 20,
                           fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
                         ),
                       ),
                       Text(
                         doc.tipoDocumentoNombre ?? 'TIPO NO DEFINIDO',
                         style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.grey,
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                _buildStatusChip(doc.estado),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildConfidentialityBadge(doc.nivelConfidencialidad),
+                        const SizedBox(width: 8),
+                        _buildStatusChip(doc.estado),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 40),
+            const Divider(height: 24, thickness: 1),
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 3,
+              childAspectRatio: 4.5,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 16,
               children: [
                 _buildMiniInfo(
-                  'Correlativo',
+                  'Número Correlativo',
                   doc.numeroCorrelativo,
                   Icons.tag_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Área Origen',
+                  'Área de Origen',
                   doc.areaOrigenNombre ?? 'N/A',
-                  Icons.location_on_rounded,
+                  Icons.business_center_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Gestión',
+                  'Gestión / Año',
                   doc.gestion,
                   Icons.calendar_today_rounded,
+                  theme,
                 ),
                 _buildMiniInfo(
-                  'Responsable',
-                  doc.responsableNombre ?? 'No asignado',
-                  Icons.person_rounded,
+                  'Responsable Asignado',
+                  doc.responsableNombre ?? 'Sin asignar',
+                  Icons.person_pin_rounded,
+                  theme,
+                ),
+                _buildMiniInfo(
+                  'Carpeta de Archivo',
+                  doc.carpetaNombre ?? 'Sin carpeta',
+                  Icons.inventory_2_rounded,
+                  theme,
+                ),
+                _buildMiniInfo(
+                  'Ubicación Física',
+                  doc.ubicacionFisica ?? 'No registrada',
+                  Icons.shelves,
+                  theme,
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompactQR(String data) {
+    return Tooltip(
+      message: 'Código QR de validación',
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          ],
+        ),
+        child: QrImageView(
+          data: data,
+          version: QrVersions.auto,
+          size: 60.0,
+          eyeStyle: QrEyeStyle(
+            eyeShape: QrEyeShape.square,
+            color: AppTheme.colorPrimario,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQrButton() {
+    return ElevatedButton(
+      onPressed: _isGeneratingQr ? null : _generateQr,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        _isGeneratingQr ? '...' : 'Generar QR',
+        style: const TextStyle(fontSize: 10),
+      ),
+    );
+  }
+
+  Future<void> _printDocumento() async {
+    String? qrData = _normalizeQrData(
+      _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
+    );
+    if (qrData == null) {
+      await _generateQr();
+      qrData = _normalizeQrData(
+        _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
+      );
+    }
+    final qrDataSafe =
+        (qrData != null && qrData.isNotEmpty)
+            ? qrData
+            : widget.documento.codigo;
+
+    final doc = widget.documento;
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build:
+            (context) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                  ),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Expanded(
+                        flex: 3,
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Comprobante de Documento',
+                              style: pw.TextStyle(
+                                fontSize: 18,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.Text(
+                              'Correspondiente al ${dateFormat.format(doc.fechaDocumento)}',
+                              style: pw.TextStyle(
+                                fontSize: 10,
+                                color: PdfColors.grey700,
+                              ),
+                            ),
+                            pw.SizedBox(height: 6),
+                            _buildPdfRow('Área', doc.areaOrigenNombre ?? 'N/A'),
+                            _buildPdfRow(
+                              'Tipo',
+                              doc.tipoDocumentoNombre ?? 'N/A',
+                            ),
+                            _buildPdfRow('Gestión', doc.gestion),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(width: 8),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(8),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(
+                            width: 0.6,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                        child: pw.Column(
+                          children: [
+                            pw.Text('N°', style: pw.TextStyle(fontSize: 10)),
+                            pw.Text(
+                              doc.numeroCorrelativo,
+                              style: pw.TextStyle(
+                                fontSize: 16,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.SizedBox(height: 6),
+                            pw.Text(
+                              'Estado: ${doc.estado}',
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 14),
+                pw.Text(
+                  'Detalle',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                _buildPdfRow('Código', doc.codigo),
+                _buildPdfRow('Correlativo', doc.numeroCorrelativo),
+                _buildPdfRow('Tipo', doc.tipoDocumentoNombre ?? 'N/A'),
+                _buildPdfRow('Área origen', doc.areaOrigenNombre ?? 'N/A'),
+                _buildPdfRow('Gestión', doc.gestion),
+                _buildPdfRow(
+                  'Fecha documento',
+                  dateFormat.format(doc.fechaDocumento),
+                ),
+                _buildPdfRow(
+                  'Responsable',
+                  doc.responsableNombre ?? 'No asignado',
+                ),
+                _buildPdfRow('Carpeta', doc.carpetaNombre ?? 'Sin carpeta'),
+                _buildPdfRow(
+                  'Ubicacion fisica',
+                  doc.ubicacionFisica ?? 'No registrada',
+                ),
+                _buildPdfRow('Estado', doc.estado),
+                _buildPdfRow(
+                  'Descripcion',
+                  doc.descripcion ?? 'Sin descripción',
+                ),
+                pw.SizedBox(height: 16),
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey600, width: 0.6),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Container(
+                        color: PdfColors.blue100,
+                        padding: const pw.EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 8,
+                        ),
+                        child: pw.Row(
+                          children: [
+                            _pdfHeaderCell('Cuenta', flex: 2),
+                            _pdfHeaderCell('Descripción', flex: 4),
+                            _pdfHeaderCell('Débitos', flex: 2, alignEnd: true),
+                            _pdfHeaderCell('Créditos', flex: 2, alignEnd: true),
+                          ],
+                        ),
+                      ),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 8,
+                        ),
+                        child: pw.Row(
+                          children: [
+                            _pdfBodyCell('—', flex: 2),
+                            _pdfBodyCell(
+                              doc.descripcion ?? 'Detalle no registrado',
+                              flex: 4,
+                            ),
+                            _pdfBodyCell('0.00', flex: 2, alignEnd: true),
+                            _pdfBodyCell('0.00', flex: 2, alignEnd: true),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  'QR',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                pw.BarcodeWidget(
+                  barcode: pw.Barcode.qrCode(),
+                  data: qrDataSafe,
+                  width: 120,
+                  height: 120,
+                ),
+                pw.SizedBox(height: 8),
+                pw.Text(qrDataSafe, style: const pw.TextStyle(fontSize: 10)),
+              ],
+            ),
+      ),
+    );
+
+    try {
+      await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorHelper.getErrorMessage(e)),
+            backgroundColor: AppTheme.colorError,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmarEliminarDocumento(Documento doc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar documento'),
+        content: Text(
+          '¿Estás seguro de eliminar el documento "${doc.codigo}"?\n\nEsta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sí, Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _eliminarDocumento(doc);
+    }
+  }
+
+  Future<void> _eliminarDocumento(Documento doc) async {
+    try {
+      final service = Provider.of<DocumentoService>(context, listen: false);
+      await service.delete(doc.id);
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Text('Documento "${doc.codigo}" eliminado correctamente'),
+            ],
+          ),
+          backgroundColor: AppTheme.colorExito,
+        ),
+      );
+      
+      // Regresar a la pantalla anterior
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al eliminar: ${ErrorHelper.getErrorMessage(e)}'),
+          backgroundColor: AppTheme.colorError,
+        ),
+      );
+    }
+  }
+
+  pw.Widget _buildPdfRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 6),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 120,
+            child: pw.Text(
+              label,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Expanded(child: pw.Text(value)),
+        ],
       ),
     );
   }
@@ -250,70 +681,203 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     );
   }
 
-  Widget _buildMiniInfo(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey),
-        const SizedBox(width: 12),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+  Widget _buildMiniInfo(
+    String label,
+    String value,
+    IconData icon,
+    ThemeData theme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
             ),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildGeneralStats(
-    Documento doc,
-    DateFormat dateFormat,
-    ThemeData theme,
-  ) {
+  pw.Widget _pdfHeaderCell(String text, {int flex = 1, bool alignEnd = false}) {
+    return pw.Expanded(
+      flex: flex,
+      child: pw.Text(
+        text,
+        textAlign: alignEnd ? pw.TextAlign.right : pw.TextAlign.left,
+        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
+  pw.Widget _pdfBodyCell(String text, {int flex = 1, bool alignEnd = false}) {
+    return pw.Expanded(
+      flex: flex,
+      child: pw.Text(
+        text,
+        textAlign: alignEnd ? pw.TextAlign.right : pw.TextAlign.left,
+        style: const pw.TextStyle(fontSize: 10),
+      ),
+    );
+  }
+
+  Widget _buildDescriptionCard(Documento doc, ThemeData theme) {
     return AnimatedCard(
       delay: const Duration(milliseconds: 200),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'DESCRIPCIÓN',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.withOpacity(0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.notes_rounded,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'DESCRIPCIÓN Y DETALLES',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: Colors.grey.shade700,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    doc.descripcion ?? 'Sin descripción adicional.',
-                    style: GoogleFonts.inter(fontSize: 15, height: 1.5),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              doc.descripcion ?? 'Sin descripción adicional registrada.',
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                height: 1.6,
+                color: Colors.black87,
               ),
             ),
+            if (doc.palabrasClave.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: doc.palabrasClave.map((tag) => _buildKeywordChip(tag, theme)).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKeywordChip(String label, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+      ),
+      child: Text(
+        '#$label',
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfidentialityBadge(int level) {
+    Color color;
+    String text;
+    switch (level) {
+      case 3:
+        color = Colors.red.shade700;
+        text = 'CRÍTICO';
+        break;
+      case 2:
+        color = Colors.orange.shade700;
+        text = 'RESERVADO';
+        break;
+      default:
+        color = Colors.blue.shade700;
+        text = 'PÚBLICO';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lock_outline_rounded, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
           ),
-          const SizedBox(width: 24),
-          if (doc.codigoQR != null) _buildQRCode(doc.codigoQR!, theme),
         ],
       ),
     );
@@ -352,168 +916,615 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
     );
   }
 
-  Widget _buildRightColumn(DateFormat dateFormat, ThemeData theme) {
+  Widget _buildQrPlaceholder(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.qr_code_rounded,
+            size: 48,
+            color: theme.colorScheme.primary.withOpacity(0.6),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'QR no disponible',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 32,
+            child: ElevatedButton(
+              onPressed: _isGeneratingQr ? null : _generateQr,
+              child: Text(
+                _isGeneratingQr ? 'Generando...' : 'Generar QR',
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnexosSection(ThemeData theme) {
+    return AnimatedCard(
+      delay: const Duration(milliseconds: 300),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Anexos',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _isUploadingAnexo ? null : _pickAndUploadAnexo,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon:
+                      _isUploadingAnexo
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Icon(Icons.attach_file_rounded, size: 18),
+                  label: Text(
+                    _isUploadingAnexo ? 'Subiendo...' : 'Subir anexo',
+                    style: GoogleFonts.inter(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_isLoadingAnexos)
+              const Center(child: CircularProgressIndicator())
+            else if (_anexos.isEmpty)
+              Text(
+                'No hay anexos cargados',
+                style: GoogleFonts.inter(color: Colors.grey),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _anexos.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final anexo = _anexos[index];
+                  return InkWell(
+                    onTap: () => _handleAnexoLink(anexo),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.picture_as_pdf_outlined,
+                            color: Colors.black54,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  anexo.nombreArchivo,
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatFileSize(anexo.tamano),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRightColumn(ThemeData theme) {
+    final hasPreview = _previewPdfBytes != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'HISTORIAL DE MOVIMIENTOS',
-          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.visibility_rounded, 
+                size: 20, 
+                color: theme.colorScheme.primary
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'VISUALIZACIÓN',
+              style: GoogleFonts.poppins(
+                fontSize: 14, 
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.0,
+                color: Colors.black87,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
-        _isLoadingMovimientos
-            ? _buildMovShimmer()
-            : _movimientos.isEmpty
-            ? _buildEmptyMovs()
-            : Column(
-              children:
-                  _movimientos
-                      .map((m) => _buildMovItem(m, dateFormat, theme))
-                      .toList(),
-            ),
+        hasPreview
+            ? _buildPdfPreview(theme)
+            : _buildAttachDocumentPlaceholder(theme),
+        const SizedBox(height: 16),
+        _buildQrCard(widget.documento, theme),
       ],
     );
   }
 
-  Widget _buildMovShimmer() {
-    return Column(
-      children: List.generate(
-        3,
-        (i) => LoadingShimmer(
-          width: double.infinity,
-          height: 100,
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyMovs() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.history_toggle_off_rounded, size: 48, color: Colors.grey),
-          SizedBox(height: 16),
-          Text('Sin movimientos'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMovItem(Movimiento mov, DateFormat dateFormat, ThemeData theme) {
-    final isOut = mov.tipoMovimiento == 'Salida';
-    final color = isOut ? Colors.red : Colors.green;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
+  Widget _buildAttachDocumentPlaceholder(ThemeData theme) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return InkWell(
+          onTap: _isUploadingAnexo ? null : _pickAndUploadAnexo,
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isOut ? Icons.north_east_rounded : Icons.south_west_rounded,
-              color: color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mov.tipoMovimiento.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  mov.areaDestinoNombre ?? mov.areaOrigenNombre ?? 'Sin área',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  dateFormat.format(mov.fechaMovimiento),
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.3),
+                width: 2,
+                style: BorderStyle.solid,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withOpacity(0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
-          ),
-          if (mov.estado == 'Activo' && isOut)
-            TextButton(
-              onPressed: () => _handleReturn(mov.id),
-              child: Text(
-                'DEVOLVER',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 180),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.cloud_upload_rounded,
+                        size: constraints.maxWidth < 400 ? 40 : 56,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Subir Documento Digital',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: constraints.maxWidth < 400 ? 16 : 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Arrastra tu PDF aquí o haz clic',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: constraints.maxWidth < 400 ? 12 : 14,
+                        color: Colors.grey.shade600,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    if (_isUploadingAnexo)
+                      Column(
+                        children: [
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Subiendo...',
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700),
+                          )
+                        ],
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: _pickAndUploadAnexo,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.folder_open_rounded, size: 18),
+                        label: Text(
+                          'Examinar',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Future<void> _handleReturn(int movId) async {
-    try {
-      await Provider.of<MovimientoService>(
-        context,
-        listen: false,
-      ).devolverDocumento(movId);
-      _loadMovimientos();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Documento devuelto exitosamente'),
-            backgroundColor: AppTheme.colorExito,
+  Widget _buildPdfPreview(ThemeData theme) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          height: 520,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.withOpacity(0.15)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14),
+            ],
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
+          child: PdfPreview(
+            build: (_) => _previewPdfBytes!,
+            allowPrinting: true,
+            allowSharing: true,
+            canChangeOrientation: false,
+            canChangePageFormat: false,
+            canDebug: false,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _previewFileName ?? 'PDF adjunto',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: _isUploadingAnexo ? null : _pickAndUploadAnexo,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(
+                'Reemplazar PDF',
+                style: GoogleFonts.inter(fontSize: 12),
+              ),
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<Uint8List> _buildPdfBytes() async {
+    String? qrData = _normalizeQrData(
+      _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
+    );
+    if (qrData == null) {
+      await _generateQr();
+      qrData = _normalizeQrData(
+        _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
+      );
+    }
+    final qrDataSafe =
+        (qrData != null && qrData.isNotEmpty)
+            ? qrData
+            : widget.documento.codigo;
+
+    final doc = widget.documento;
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build:
+            (context) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    ErrorHelper.getErrorMessage(e),
-                    style: const TextStyle(fontSize: 14),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                  ),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Expanded(
+                        flex: 3,
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Comprobante de Documento',
+                              style: pw.TextStyle(
+                                fontSize: 18,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.Text(
+                              'Correspondiente al ${dateFormat.format(doc.fechaDocumento)}',
+                              style: pw.TextStyle(
+                                fontSize: 10,
+                                color: PdfColors.grey700,
+                              ),
+                            ),
+                            pw.SizedBox(height: 6),
+                            _buildPdfRow('Área', doc.areaOrigenNombre ?? 'N/A'),
+                            _buildPdfRow(
+                              'Tipo',
+                              doc.tipoDocumentoNombre ?? 'N/A',
+                            ),
+                            _buildPdfRow('Gestión', doc.gestion),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(width: 8),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(8),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(
+                            width: 0.6,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                        child: pw.Column(
+                          children: [
+                            pw.Text('N°', style: pw.TextStyle(fontSize: 10)),
+                            pw.Text(
+                              doc.numeroCorrelativo,
+                              style: pw.TextStyle(
+                                fontSize: 16,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                            pw.SizedBox(height: 6),
+                            pw.Text(
+                              'Estado: ${doc.estado}',
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  doc.descripcion ?? 'Detalle no registrado',
+                  style: pw.TextStyle(fontSize: 11),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(8),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(width: 0.6, color: PdfColors.grey600),
+                  ),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            _buildPdfRow('Código', doc.codigo),
+                            _buildPdfRow('Correlativo', doc.numeroCorrelativo),
+                            _buildPdfRow(
+                              'Responsable',
+                              doc.responsableNombre ?? 'No asignado',
+                            ),
+                            _buildPdfRow(
+                              'Carpeta',
+                              doc.carpetaNombre ?? 'Sin carpeta',
+                            ),
+                            _buildPdfRow(
+                              'Ubicación',
+                              doc.ubicacionFisica ?? 'No registrada',
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.SizedBox(width: 12),
+                      pw.BarcodeWidget(
+                        barcode: pw.Barcode.qrCode(),
+                        data: qrDataSafe,
+                        width: 80,
+                        height: 80,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            backgroundColor: AppTheme.colorError,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 5),
-          ),
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  Future<void> _loadAnexos() async {
+    setState(() => _isLoadingAnexos = true);
+    try {
+      final service = Provider.of<AnexoService>(context, listen: false);
+      final anexos = await service.listarPorDocumento(widget.documento.id);
+      if (mounted) {
+        setState(() => _anexos = anexos);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showNotification(
+          ErrorHelper.getErrorMessage(e),
+          background: Colors.red.shade600,
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingAnexos = false);
+      }
     }
+  }
+
+  Future<void> _pickAndUploadAnexo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    final file = result?.files.first;
+    if (file == null) return;
+    final pdfBytes = file.bytes;
+    if (pdfBytes == null) {
+      _showNotification(
+        'No se pudo leer el archivo PDF',
+        background: Colors.red.shade600,
+      );
+      return;
+    }
+
+    setState(() => _isUploadingAnexo = true);
+    try {
+      final service = Provider.of<AnexoService>(context, listen: false);
+      final anexo = await service.subirArchivo(widget.documento.id, file);
+      if (mounted) {
+        setState(() {
+          _previewPdfBytes = pdfBytes;
+          _previewFileName = file.name;
+        });
+        _showNotification(
+          'Anexo "${anexo.nombreArchivo}" cargado',
+          background: AppTheme.colorExito,
+        );
+        await _loadAnexos();
+      }
+    } catch (e) {
+      if (mounted) {
+        _showNotification(
+          ErrorHelper.getErrorMessage(e),
+          background: Colors.red.shade600,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAnexo = false);
+      }
+    }
+  }
+
+  void _handleAnexoLink(Anexo anexo) {
+    final url = anexo.urlArchivo;
+    final message =
+        url != null
+            ? 'Descarga disponible: ${url.replaceAll('\\', '/')} '
+            : 'Anexo sin URL disponible';
+    _showNotification(message, background: AppTheme.colorPrimario);
+  }
+
+  String _formatFileSize(int? bytes) {
+    if (bytes == null) return 'Tamaño desconocido';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    double size = bytes.toDouble();
+    var index = 0;
+    while (size >= 1024 && index < units.length - 1) {
+      size /= 1024;
+      index++;
+    }
+    return '${size.toStringAsFixed(size < 10 ? 2 : 1)} ${units[index]}';
+  }
+
+  void _showNotification(
+    String mensaje, {
+    Color background = AppTheme.colorPrimario,
+  }) {
+    if (!mounted) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensaje, maxLines: 3, overflow: TextOverflow.ellipsis),
+          backgroundColor: background,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    });
   }
 
   Color _getStatusColor(String estado) {
@@ -527,5 +1538,77 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  Widget _buildQrCard(Documento doc, ThemeData theme) {
+    if (_qrData == null) return const SizedBox.shrink();
+    return AnimatedCard(
+      delay: const Duration(milliseconds: 100),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withOpacity(0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+             QrImageView(
+              data: _qrData!,
+              version: QrVersions.auto,
+              size: 80.0,
+              eyeStyle: QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: AppTheme.colorPrimario,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CÓDIGO QR',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _qrData!,
+                      style: GoogleFonts.robotoMono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Autenticidad del documento',
+                    style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -22,7 +22,9 @@ public class AlertasController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Alerta>>> GetMisAlertas()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"));
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out var userId))
+            return Unauthorized();
 
         var alertas = await _context.Alertas
             .Where(a => a.UsuarioId == userId)
@@ -36,7 +38,9 @@ public class AlertasController : ControllerBase
     [HttpGet("unread-count")]
     public async Task<ActionResult<int>> GetUnreadCount()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"));
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
 
         var count = await _context.Alertas
             .Where(a => a.UsuarioId == userId && !a.Leida)
@@ -48,7 +52,9 @@ public class AlertasController : ControllerBase
     [HttpPut("{id}/leida")]
     public async Task<IActionResult> MarcarComoLeida(int id)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"));
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
 
         var alerta = await _context.Alertas.FindAsync(id);
 
@@ -69,7 +75,9 @@ public class AlertasController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> EliminarAlerta(int id)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"));
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
         var alerta = await _context.Alertas.FindAsync(id);
 
         if (alerta == null) return NotFound();

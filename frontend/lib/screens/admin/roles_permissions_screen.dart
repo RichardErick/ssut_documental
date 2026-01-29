@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
 import '../../models/area.dart';
 import '../../models/usuario.dart';
 import '../../services/api_service.dart';
@@ -48,6 +49,17 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
   @override
   void initState() {
     super.initState();
+    // Validar permiso al entrar (defensa en profundidad)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (!authProvider.hasPermission('gestionar_seguridad')) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text('Acceso denegado: Requiere permiso de seguridad')),
+        );
+      }
+    });
+
     _loadData();
     _searchController.addListener(_onSearchChanged);
   }
@@ -239,7 +251,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                               value: a.id,
                               child: Text(a.nombre),
                             ),
-                          ),
+                          ).toList(),
                         ],
                         onChanged: (v) => setStateDialog(() => areaId = v),
                       ),
@@ -937,11 +949,16 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                                 color: _getRolColor(rol),
                               ),
                               const SizedBox(width: 8),
-                              Text(_getRolDisplayName(rol)),
+                              Expanded(
+                                child: Text(
+                                  _getRolDisplayName(rol),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
+                      ).toList(),
                     ],
                     onChanged: (value) {
                       setState(() => _selectedRolFilter = value);
@@ -968,7 +985,10 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                       ..._areas.map(
                         (area) => DropdownMenuItem(
                           value: area.id.toString(),
-                          child: Text(area.nombre),
+                          child: Text(
+                            area.nombre,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ],
@@ -1051,7 +1071,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
           crossAxisCount: isDesktop ? 3 : 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.1,
+          childAspectRatio: isDesktop ? 1.0 : 0.85, 
         ),
         itemCount: _usuariosFiltrados.length,
         itemBuilder: (context, index) {

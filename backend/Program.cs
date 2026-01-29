@@ -10,6 +10,10 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar comportamiento de fechas para Npgsql (PostgreSQL)
+// Esto evita errores al guardar DateTime.UtcNow en columnas tipo TIMESTAMP sin zona horaria
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 // Agrega los servicios .
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -58,10 +62,11 @@ builder.Services.AddCors(options =>
 
 // Configuramos Postgres
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Host=localhost;Database=ssut_gestion_documental;Username=postgres;Password=postgres";
+            ?? "Host=localhost;Database=ssut_gestion_documental;Username=postgres;Password=nel7243159";
 
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-// Ya no necesitamos mapear el enum porque usamos text en lugar de rol_enum
+        // MapEnum eliminado ya que guardamos el estado como string
+        // dataSourceBuilder.MapEnum<EstadoDocumento>("estado_documento_enum");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -99,6 +104,7 @@ if (!string.IsNullOrWhiteSpace(jwtIssuer) &&
 builder.Services.AddScoped<IDocumentoService, DocumentoService>();
 builder.Services.AddScoped<IMovimientoService, MovimientoService>();
 builder.Services.AddScoped<IQRCodeService, QRCodeService>();
+builder.Services.AddScoped<IQRService, QRService>();
 builder.Services.AddScoped<IReporteService, ReporteService>();
 
 var app = builder.Build();
@@ -199,8 +205,94 @@ using (var scope = app.Services.CreateScope())
         if (db.Database.CanConnect())
         {
             logger.LogInformation("Conexión a la base de datos exitosa");
-            // Si la base de datos ya existe, no intentamos crearla
-            // Usa migraciones para actualizar el esquema si es necesario
+            
+            // Fix temporal para migrar la columna estado de enum a text si es necesario
+            // Esto evita errores de "datatype mismatch" en PostgreSQL
+            try {
+                const string fixSql = @"
+DO $mig$ 
+BEGIN 
+    -- Elimina vistas que referencian enums para permitir ALTER
+    IF EXISTS (SELECT 1 FROM information_schema.views WHERE table_name = 'vista_documentos_activos') THEN
+        EXECUTE 'DROP VIEW IF EXISTS vista_documentos_activos';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.views WHERE table_name = 'vista_movimientos_activos') THEN
+        EXECUTE 'DROP VIEW IF EXISTS vista_movimientos_activos';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.views WHERE table_name = 'vista_documentos_completa') THEN
+        EXECUTE 'DROP VIEW IF EXISTS vista_documentos_completa';
+    END IF;
+
+    -- Convierte columnas enum a texto (ignora si ya están en texto)
+    BEGIN
+        ALTER TABLE documentos ALTER COLUMN estado TYPE VARCHAR(50) USING estado::text;
+    EXCEPTION WHEN undefined_column THEN
+        NULL;
+    WHEN others THEN
+        RAISE;
+    END;
+
+    BEGIN
+        ALTER TABLE movimientos ALTER COLUMN tipo_movimiento TYPE VARCHAR(50) USING tipo_movimiento::text;
+    EXCEPTION WHEN undefined_column THEN
+        NULL;
+    WHEN others THEN
+        RAISE;
+    END;
+
+    BEGIN
+        ALTER TABLE movimientos ALTER COLUMN estado TYPE VARCHAR(50) USING estado::text;
+    EXCEPTION WHEN undefined_column THEN
+        NULL;
+    WHEN others THEN
+        RAISE;
+    END;
+
+    BEGIN
+        ALTER TABLE historial_documento ALTER COLUMN estado_anterior TYPE VARCHAR(50) USING estado_anterior::text;
+    EXCEPTION WHEN undefined_column THEN
+        NULL;
+    WHEN others THEN
+        RAISE;
+    END;
+
+    BEGIN
+        ALTER TABLE historial_documento ALTER COLUMN estado_nuevo TYPE VARCHAR(50) USING estado_nuevo::text;
+    EXCEPTION WHEN undefined_column THEN
+        NULL;
+    WHEN others THEN
+        RAISE;
+    END;
+
+    BEGIN
+        ALTER TABLE usuarios ALTER COLUMN rol TYPE VARCHAR(30) USING rol::text;
+    EXCEPTION WHEN undefined_column THEN
+        NULL;
+    WHEN others THEN
+        RAISE;
+    END;
+END $mig$;
+
+-- Opcional: eliminar types si ya no se usan
+DO $cleanup$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_movimiento_enum') THEN
+        DROP TYPE IF EXISTS tipo_movimiento_enum;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_movimiento_enum') THEN
+        DROP TYPE IF EXISTS estado_movimiento_enum;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_documento_enum') THEN
+        DROP TYPE IF EXISTS estado_documento_enum;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'rol_enum') THEN
+        DROP TYPE IF EXISTS rol_enum;
+    END IF;
+END $cleanup$;";
+                db.Database.ExecuteSqlRaw(fixSql);
+            } catch (Exception ex) {
+                logger.LogWarning("No se pudo ejecutar el script de corrección de tipos: {Message}", ex.Message);
+            }
         }
         //aqui no deberia entrar nunca
         else

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SistemaGestionDocumental.Data;
 using SistemaGestionDocumental.DTOs;
 using SistemaGestionDocumental.Services;
+using SistemaGestionDocumental.Models;
 
 namespace SistemaGestionDocumental.Services;
 
@@ -83,9 +84,9 @@ public class ReporteService : IReporteService
     public async Task<EstadisticaDocumentoDTO> ObtenerEstadisticasAsync()
     {
         var totalDocumentos = await _context.Documentos.CountAsync();
-        var documentosActivos = await _context.Documentos.CountAsync(d => d.Estado == "Activo");
-        var documentosPrestados = await _context.Documentos.CountAsync(d => d.Estado == "Prestado");
-        var documentosArchivados = await _context.Documentos.CountAsync(d => d.Estado == "Archivado");
+        var documentosActivos = await _context.Documentos.CountAsync(d => d.Estado == SistemaGestionDocumental.Models.EstadoDocumento.Activo);
+        var documentosPrestados = await _context.Documentos.CountAsync(d => d.Estado == SistemaGestionDocumental.Models.EstadoDocumento.Prestado);
+        var documentosArchivados = await _context.Documentos.CountAsync(d => d.Estado == SistemaGestionDocumental.Models.EstadoDocumento.Archivado);
 
         var nowUtc = DateTime.UtcNow;
         var inicioMes = new DateTime(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);

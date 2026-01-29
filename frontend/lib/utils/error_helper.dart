@@ -85,11 +85,15 @@ class ErrorHelper {
         final responseData = error.response?.data;
 
         // Intentar extraer el mensaje del cuerpo de la respuesta
+        String? serverMessage;
         if (responseData is Map<String, dynamic>) {
-          final message = responseData['message'] as String?;
-          if (message != null && message.isNotEmpty) {
-            return message;
-          }
+          serverMessage = responseData['message'] as String?;
+        }
+
+        if (serverMessage != null && serverMessage.isNotEmpty) {
+          // Si el backend manda un mensaje específico, respetarlo.
+          if (statusCode == 401) return serverMessage;
+          if (statusCode == 423) return serverMessage;
         }
 
         // Mensajes específicos por código de estado
@@ -97,13 +101,18 @@ class ErrorHelper {
           return 'Solicitud inválida. Verifique los datos ingresados.';
         }
         if (statusCode == 401) {
-          return 'Credenciales inválidas. Verifique su usuario y contraseña.';
+          return serverMessage ??
+              'Credenciales inválidas. Verifique su usuario y contraseña.';
         }
         if (statusCode == 403) {
           return 'No tiene permisos para realizar esta acción.';
         }
         if (statusCode == 404) {
           return 'Recurso no encontrado.';
+        }
+        if (statusCode == 423) {
+          return serverMessage ??
+              'Cuenta bloqueada temporalmente por exceso de intentos.';
         }
         if (statusCode == 500) {
           return 'Error del servidor. Por favor, intente más tarde.';
