@@ -43,6 +43,20 @@ class CarpetaService {
     }
   }
 
+  Future<Carpeta> getById(int id) async {
+    try {
+      final apiService = Provider.of<ApiService>(
+        navigatorKey.currentContext!,
+        listen: false,
+      );
+      final response = await apiService.get('/carpetas/$id');
+      return Carpeta.fromJson(response.data);
+    } catch (e) {
+      print('API Error getById: $e');
+      rethrow;
+    }
+  }
+
   Future<Carpeta> create(CreateCarpetaDTO dto) async {
     final apiService = Provider.of<ApiService>(
       navigatorKey.currentContext!,

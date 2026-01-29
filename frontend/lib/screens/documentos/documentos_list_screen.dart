@@ -38,10 +38,11 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
   List<Carpeta> _subcarpetas = [];
   Carpeta? _carpetaSeleccionada;
   bool _estaCargandoSubcarpetas = false;
+  bool _estaCargandoSubcarpetas = false;
   bool _vistaGrid = true;
   String _consultaBusqueda = '';
   String _filtroSeleccionado = 'todos';
-  String _vistaSeleccionada = 'carpetas';
+  // Removed _vistaSeleccionada as it seems unused/confusing in this refactor
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 
@@ -66,38 +67,29 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
           _estaCargando = true;
           _estaCargandoCarpetas = true;
       });
-      // Necesitamos cargar la info de la carpeta para mostrarl
-      // O podemos intentar _cargarCarpetas() y luego seleccionar?
-      // Mejor cargamos carpetas generales y luego seleccionamos
-      await _cargarCarpetas();
       
-      // Encontrar la carpeta en la lista (esto asume que está en root, pero subcarpetas no están en _carpetas root)
-      // Si es subcarpeta, necesitamos buscarla. 
-      // Por ahora intentemos buscar en lo cargado.
-      // Si es una subcarpeta, _carpetas contiene solo ROOT folders de 2024 (current year default).
-      // Esto es problematico si venimos de 2025.
-      
-      // HACK: Forzamos la carga de la carpeta por ID usando el servicio si es necesario, 
-      // pero DocumentosListScreen usa `_carpetas` para el GridView root.
-      // Si entramos con un ID, queremos ver la *vista de detalles* de esa carpeta.
-      
-      // Vamos a simular que seleccionamos una carpeta manual
-      // Fetch carpeta details first?
-      // CarpetaService no tiene getById publico expuesto aqui facil? Check service.
       try {
          final service = Provider.of<CarpetaService>(context, listen: false);
          final carpeta = await service.getById(id);
+         
          if(mounted) {
-             _abrirCarpeta(carpeta);
+             // Set state directly
+             _carpetaSeleccionada = carpeta;
+             _estaCargandoCarpetas = false;
+             // Load content
+             await _abrirCarpeta(carpeta);
          }
       } catch(e) {
-          print('Error cargando carpeta inicial: $e');
+          print('Error cargando carpeta inicial $id: $e');
+          if(mounted) _mostrarSnackBarError('No se pudo cargar la carpeta solicitada');
+      } finally {
+        if(mounted) {
+          setState(() {
+              _estaCargando = false;
+              _estaCargandoCarpetas = false;
+          });
+        }
       }
-      
-      setState(() {
-          _estaCargando = false;
-          _estaCargandoCarpetas = false;
-      });
   }
 
   @override
@@ -256,6 +248,14 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButton: _carpetaSeleccionada != null && canCreate 
+        ? FloatingActionButton.extended(
+            onPressed: () => _agregarDocumento(_carpetaSeleccionada!),
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            label: const Text('Nuevo Documento'),
+            backgroundColor: Colors.blue.shade700,
+          )
+        : null,
       body: Column(
         children: [
           _construirFiltrosSuperior(theme, canCreate),
@@ -268,6 +268,18 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _agregarDocumento(Carpeta carpeta) async {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DocumentoFormScreen(initialCarpetaId: carpeta.id),
+        ),
+      );
+      if (result == true) {
+        _cargarDocumentosCarpeta(carpeta.id);
+      }
   }
 
   Widget _construirVistaCarpetas(ThemeData theme) {
@@ -421,26 +433,38 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
           child: Row(
             children: [
               IconButton(
-                onPressed: () => setState(() => _carpetaSeleccionada = null),
+                onPressed: () { 
+                    if (widget.initialCarpetaId != null) {
+                        Navigator.pop(context); // If we came from navigation, pop
+                    } else {
+                        setState(() => _carpetaSeleccionada = null);
+                    }
+                },
                 icon: const Icon(Icons.arrow_back_rounded),
               ),
               const SizedBox(width: 4),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade400, Colors.blue.shade700],
+              Hero( // Add Hero animation for fun
+                tag: 'folder_icon_${carpeta.id}',
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade400, Colors.blue.shade700],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                         BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                    ]
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.folder_open_rounded,
-                  color: Colors.white,
-                  size: 20,
+                  child: const Icon(
+                    Icons.folder_open_rounded,
+                    color: Colors.white,
+                    size: 26,
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,40 +472,45 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                     Text(
                       carpeta.nombre,
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
-                    if (gestionLine != null)
-                      Text(
-                        gestionLine,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    if (rangoLine != null)
+                        Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4)
+                            ),
+                            child: Text(
+                                rangoLine,
+                                style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade800,
+                                ),
+                            ),
                         ),
-                      ),
                   ],
                 ),
               ),
-              // Acción: Nueva Carpeta (subcarpeta) siempre
-              ElevatedButton.icon(
-                onPressed: () => _crearSubcarpeta(carpeta.id),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber.shade800,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // Solo mostrar botón "Nueva Carpeta" si NO es una subcarpeta asignada a un rango específico que no debería tener hijos
+              // O simplificar el flujo: NO permitir crear sub-subcarpetas infinitas si la lógica de negocio es estricta (Año > Comprobante > Rango).
+              // Si carpeta.carpetaPadreId != null, es subcarpeta. Asumimos que no hay nivel 3.
+              if (carpeta.carpetaPadreId == null)
+                  ElevatedButton.icon(
+                    onPressed: () => _crearSubcarpeta(carpeta.id),
+                    // styling...
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.shade800,
+                      foregroundColor: Colors.white
+                    ),
+                    icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                    label: const Text('Subcarpeta'),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 0,
-                  ),
-                  elevation: 0,
-                ),
-                icon: const Icon(Icons.create_new_folder_outlined, size: 18),
-                label: const Text('Nueva Carpeta'),
-              ),
-              const SizedBox(width: 8),
             ],
           ),
         ),
@@ -661,6 +690,16 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                    size: 20,
+                  ),
+                  tooltip: 'Eliminar',
+                  onPressed: () => _confirmarEliminarDocumento(d),
                 ),
               ],
             ),
@@ -1250,44 +1289,127 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     }
   }
 
+  Future<void> _confirmarEliminarSubcarpeta(Carpeta carpeta) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Eliminar carpeta'),
+            content: Text(
+              '¿Estás seguro de eliminar la carpeta "${carpeta.nombre}"?\n\n'
+              'Se eliminarán sus documentos asociados (borrado permanente).',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Sí, Borrar'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm == true) {
+      await _eliminarSubcarpeta(carpeta);
+    }
+  }
+
+  Future<void> _eliminarSubcarpeta(Carpeta carpeta) async {
+     try {
+      final carpetaService = Provider.of<CarpetaService>(
+        context,
+        listen: false,
+      );
+      await carpetaService.delete(carpeta.id, hard: true);
+      
+      if (!mounted) return;
+      
+      // Actualizar listas
+      if (carpeta.carpetaPadreId != null) {
+          _cargarSubcarpetas(carpeta.carpetaPadreId!);
+      }
+      _cargarCarpetas();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Carpeta eliminada'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarSnackBarError('No se pudo eliminar: $e');
+    }
+  }
+
   Widget _buildSubcarpetaCard(Carpeta sub, ThemeData theme) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final canDelete = authProvider.hasPermission('borrar_carpeta'); // Asumimos permiso similar o usar borrar_documento
+
     return InkWell(
       onTap: () => _abrirCarpeta(sub),
       borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 140,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.blue.shade100),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(
-              Icons.folder_shared_rounded,
-              color: Colors.blue,
-              size: 32,
+      child: Stack(
+        children: [
+          Container(
+            width: 140,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.blue.shade100),
             ),
-            const Spacer(),
-            Text(
-              sub.nombre,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.blue.shade900,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.folder_shared_rounded,
+                  color: Colors.blue,
+                  size: 32,
+                ),
+                const Spacer(),
+                Text(
+                  sub.nombre,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue.shade900,
+                  ),
+                ),
+                if (sub.rangoInicio != null && sub.rangoFin != null)
+                  Text(
+                    'Rango ${sub.rangoInicio} - ${sub.rangoFin}',
+                    style: const TextStyle(fontSize: 10, color: Colors.blueGrey),
+                  ),
+              ],
+            ),
+          ),
+          if (canDelete)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: () => _confirmarEliminarSubcarpeta(sub),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: Colors.red,
+                  ),
+                ),
               ),
             ),
-            if (sub.rangoInicio != null && sub.rangoFin != null)
-              Text(
-                'Rango ${sub.rangoInicio} - ${sub.rangoFin}',
-                style: const TextStyle(fontSize: 10, color: Colors.blueGrey),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
