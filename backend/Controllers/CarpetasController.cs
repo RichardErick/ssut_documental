@@ -233,13 +233,31 @@ public class CarpetasController : ControllerBase
             Gestion = dto.Gestion,
             Descripcion = dto.Descripcion,
             CarpetaPadreId = dto.CarpetaPadreId,
+            RangoInicio = dto.RangoInicio,
+            RangoFin = dto.RangoFin,
             Activo = true,
             FechaCreacion = DateTime.UtcNow
             // TODO: UsuarioCreacionId = obtener del contexto de autenticación
         };
 
-        _context.Carpetas.Add(carpeta);
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.Carpetas.Add(carpeta);
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            if (ex.InnerException != null && ex.InnerException.Message.Contains("IX_carpetas_Nombre_Gestion_CarpetaPadreId"))
+            {
+                return BadRequest(new { message = $"Ya existe una carpeta con el nombre '{dto.Nombre}' en esta ubicación y gestión." });
+            }
+            // Check for PostgreSQL specific unique violation code '23505'
+            if (ex.InnerException != null && ex.InnerException.Message.Contains("23505"))
+            {
+                 return BadRequest(new { message = $"Ya existe una carpeta con el nombre '{dto.Nombre}' en esta ubicación." });
+            }
+            throw;
+        }
 
         return CreatedAtAction(nameof(GetById), new { id = carpeta.Id }, new
         {
@@ -250,8 +268,8 @@ public class CarpetasController : ControllerBase
             carpeta.FechaCreacion,
             NumeroCarpeta = numeroCarpeta,
             CodigoRomano = codigoRomano,
-            RangoInicio = dto.RangoInicio,
-            RangoFin = dto.RangoFin
+            RangoInicio = carpeta.RangoInicio,
+            RangoFin = carpeta.RangoFin
         });
     }
 

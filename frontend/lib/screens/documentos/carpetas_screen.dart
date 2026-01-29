@@ -28,7 +28,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
 
   Future<void> _loadCarpetas() async {
     print('🔄 [CARPETAS] Iniciando carga de carpetas para gestión: $_gestion');
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
     try {
       final carpetaService = Provider.of<CarpetaService>(
         context,
@@ -44,24 +44,21 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
         return aIsMain ? -1 : 1;
       });
 
-      print('📋 [CARPETAS] Carpetas ordenadas:');
-      for (var carpeta in ordered) {
-        print(
-          '  - ID: ${carpeta.id}, Nombre: "${carpeta.nombre}", Subcarpetas: ${carpeta.subcarpetas.length}',
-        );
+      if (mounted) {
+        setState(() {
+          _carpetas = ordered;
+          _isLoading = false;
+        });
       }
-
-      setState(() => _carpetas = ordered);
       print('✅ [CARPETAS] Estado actualizado con ${_carpetas.length} carpetas');
     } catch (e) {
       print('❌ [CARPETAS] Error al cargar carpetas: $e');
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error al cargar carpetas: $e')));
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -74,13 +71,18 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
     );
 
     if (result == true) {
-      _loadCarpetas();
+      // Pequeño delay para asegurar consistencia en backend antes de recargar
+      await Future.delayed(const Duration(milliseconds: 300));
+      await _loadCarpetas();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final hasCarpetas = _carpetas.isNotEmpty;
+    // Check if "Comprobante de Egreso" exists to show/hide the main create button
+    final hasMainFolder = _carpetas.any((c) => c.nombre == _nombreCarpetaPermitida);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Carpetas', style: GoogleFonts.poppins()),
@@ -89,8 +91,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
         ],
       ),
       floatingActionButton:
-          !hasCarpetas ||
-                  !_carpetas.any((c) => c.nombre == _nombreCarpetaPermitida)
+          !hasCarpetas || !hasMainFolder
               ? FloatingActionButton.extended(
                 onPressed: () => _crearCarpeta(),
                 icon: const Icon(Icons.create_new_folder),
@@ -205,12 +206,13 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar (Conservar)'),
+                child: const Text('Cancelar'),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
                 ),
                 child: const Text('Sí, Borrar'),
               ),
@@ -232,7 +234,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
       await carpetaService.delete(carpeta.id, hard: true);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Carpeta eliminada (cascada)')),
+        const SnackBar(content: Text('Carpeta eliminada')),
       );
       _loadCarpetas();
     } catch (e) {
@@ -244,14 +246,13 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
   }
 
   Widget _buildCarpetaItem(Carpeta carpeta) {
-    print(
-      '🎨 [RENDER] Construyendo carpeta: ID=${carpeta.id}, Nombre="${carpeta.nombre}"',
-    );
     return Card(
+      key: ValueKey(carpeta.id),
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: ExpansionTile(
+        key: PageStorageKey('carpeta_${carpeta.id}'),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -275,6 +276,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
           if (carpeta.subcarpetas.isNotEmpty)
             ...carpeta.subcarpetas.map(
               (sub) => Container(
+                key: ValueKey(sub.id),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   border: Border(
@@ -301,21 +303,15 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
-                        icon: Icon(
+                       IconButton(
+                        icon: const Icon(
                           Icons.delete_outline_rounded,
-                          color: Colors.red.shade700,
-                          size: 22,
+                          color: Colors.red, // Rojo puro para visibilidad
+                          size: 24,
                         ),
                         tooltip: 'Eliminar Subcarpeta',
-                        onPressed: () {
-                          print(
-                            '🗑️ [ACTION] Botón eliminar subcarpeta presionado: ID=${sub.id}, Nombre="${sub.nombre}"',
-                          );
-                          _confirmarEliminarCarpeta(sub);
-                        },
+                        onPressed: () => _confirmarEliminarCarpeta(sub),
                       ),
-                      // Un icono visual para indicar que se puede entrar (aunque onTap está pendiente)
                       const Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 14,
@@ -324,15 +320,7 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
                     ],
                   ),
                   onTap: () {
-                    // TODO: Navegar a detalles de carpeta o lista de documentos filtrada
-                    // Por ahora mostramos un snackbar para feedback
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Abrir subcarpeta ${sub.nombre} (Pendiente)',
-                        ),
-                      ),
-                    );
+                     // TO DO: Acción al hacer tap en subcarpeta
                   },
                 ),
               ),
@@ -351,9 +339,6 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
   }
 
   Widget _buildCarpetaActions(Carpeta carpeta) {
-    print(
-      '🔘 [ACTIONS] Construyendo botones de acción para carpeta: ID=${carpeta.id}, Nombre="${carpeta.nombre}"',
-    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -363,24 +348,13 @@ class _CarpetasScreenState extends State<CarpetasScreen> {
             color: Colors.blue.shade700,
           ),
           tooltip: 'Nueva Subcarpeta',
-          onPressed: () {
-            print(
-              '➕ [ACTION] Botón crear subcarpeta presionado para: ID=${carpeta.id}',
-            );
-            _crearCarpeta(padreId: carpeta.id);
-          },
+          onPressed: () => _crearCarpeta(padreId: carpeta.id),
         ),
         IconButton(
-          icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+          icon: const Icon(Icons.delete_forever, color: Colors.red), // Icono más visible
           tooltip: 'Eliminar Carpeta',
-          onPressed: () {
-            print(
-              '🗑️ [ACTION] Botón eliminar carpeta presionado: ID=${carpeta.id}, Nombre="${carpeta.nombre}"',
-            );
-            _confirmarEliminarCarpeta(carpeta);
-          },
+          onPressed: () => _confirmarEliminarCarpeta(carpeta),
         ),
-        // Icono para indicar expansión manualmente ya que overrideamos trailing
         const Padding(
           padding: EdgeInsets.only(left: 4),
           child: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey),
