@@ -330,6 +330,10 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
   }
 
   Widget _buildCarpetaCard(Carpeta carpeta, ThemeData theme) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final canDelete = authProvider.hasPermission('borrar_documento') || 
+                      authProvider.role == UserRole.administradorSistema;
+
     final gestionLine =
         carpeta.gestion.isNotEmpty ? 'Gestion ${carpeta.gestion}' : null;
     final nroLine =
@@ -343,88 +347,109 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
         (carpeta.rangoInicio != null && carpeta.rangoFin != null)
             ? 'Rango: ${carpeta.rangoInicio} - ${carpeta.rangoFin}'
             : 'Rango: sin documentos';
-    return InkWell(
-      onTap: () => _abrirCarpeta(carpeta),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
+    return Stack(
+      children: [
+        InkWell(
+          onTap: () => _abrirCarpeta(carpeta),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.amber.shade300, Colors.orange.shade400],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.folder_rounded, color: Colors.white),
+                ),
+                const Spacer(),
+                Text(
+                  carpeta.nombre,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                if (gestionLine != null)
+                  Text(
+                    gestionLine,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                if (nroLine != null)
+                  Text(
+                    nroLine,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                if (romanoLine != null)
+                  Text(
+                    romanoLine,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                Text(
+                  rangoLine,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                Text(
+                  'Doc: ${carpeta.numeroDocumentos}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.amber.shade300, Colors.orange.shade400],
-                ),
-                borderRadius: BorderRadius.circular(14),
+        if (canDelete)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: IconButton(
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.red.shade600,
+                size: 22,
               ),
-              child: const Icon(Icons.folder_rounded, color: Colors.white),
-            ),
-            const Spacer(),
-            Text(
-              carpeta.nombre,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            if (gestionLine != null)
-              Text(
-                gestionLine,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            if (nroLine != null)
-              Text(
-                nroLine,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            if (romanoLine != null)
-              Text(
-                romanoLine,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            Text(
-              rangoLine,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              onPressed: () => _confirmarEliminarCarpeta(carpeta),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.red.shade50,
+                padding: const EdgeInsets.all(8),
               ),
             ),
-            Text(
-              'Doc: ${carpeta.numeroDocumentos}',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 
@@ -1298,7 +1323,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
 
 
 
-  Future<void> _confirmarEliminarSubcarpeta(Carpeta carpeta) async {
+  Future<void> _confirmarEliminarCarpeta(Carpeta carpeta) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder:
@@ -1306,7 +1331,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
             title: const Text('Eliminar carpeta'),
             content: Text(
               '¿Estás seguro de eliminar la carpeta "${carpeta.nombre}"?\n\n'
-              'Se eliminarán sus documentos asociados (borrado permanente).',
+              'Se eliminarán todas sus subcarpetas y documentos asociados de forma permanente.',
             ),
             actions: [
               TextButton(
@@ -1319,23 +1344,24 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   backgroundColor: Colors.red.shade600,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Sí, Borrar'),
+                child: const Text('Sí, Borrar Todo'),
               ),
             ],
           ),
     );
-
+ 
     if (confirm == true) {
-      await _eliminarSubcarpeta(carpeta);
+      await _eliminarCarpeta(carpeta);
     }
   }
 
-  Future<void> _eliminarSubcarpeta(Carpeta carpeta) async {
+  Future<void> _eliminarCarpeta(Carpeta carpeta) async {
      try {
       final carpetaService = Provider.of<CarpetaService>(
         context,
         listen: false,
       );
+      // Siempre usamos hard delete para carpetas por ahora según requerimiento de UX
       await carpetaService.delete(carpeta.id, hard: true);
       
       if (!mounted) return;
@@ -1343,20 +1369,25 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       // Actualizar listas
       if (carpeta.carpetaPadreId != null) {
           _cargarSubcarpetas(carpeta.carpetaPadreId!);
+      } else {
+          setState(() {
+              _carpetaSeleccionada = null; // Regresar si estábamos viendo esta carpeta
+          });
       }
       _cargarCarpetas();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Carpeta eliminada'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('Carpeta eliminada correctamente'), backgroundColor: Colors.green),
       );
     } catch (e) {
       if (!mounted) return;
-      _mostrarSnackBarError('No se pudo eliminar: $e');
+      _mostrarSnackBarError('No se pudo eliminar: ${ErrorHelper.getErrorMessage(e)}');
     }
   }
 
   Widget _buildSubcarpetaCard(Carpeta sub, ThemeData theme) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final canDelete = authProvider.hasPermission('borrar_carpeta'); // Asumimos permiso similar o usar borrar_documento
+    final canDelete = authProvider.hasPermission('borrar_documento') || 
+                      authProvider.role == UserRole.administradorSistema;
 
     return InkWell(
       onTap: () => _abrirCarpeta(sub),
@@ -1400,20 +1431,21 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
           ),
           if (canDelete)
             Positioned(
-              top: 4,
-              right: 4,
-              child: GestureDetector(
-                onTap: () => _confirmarEliminarSubcarpeta(sub),
+              top: 6,
+              right: 6,
+              child: InkWell(
+                onTap: () => _confirmarEliminarCarpeta(sub),
+                borderRadius: BorderRadius.circular(10),
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    shape: BoxShape.circle,
+                    color: Colors.red.shade100.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    size: 16,
-                    color: Colors.red,
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 18,
+                    color: Colors.red.shade700,
                   ),
                 ),
               ),
