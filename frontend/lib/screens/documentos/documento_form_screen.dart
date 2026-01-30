@@ -231,9 +231,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
       return;
     }
     if (_areaOrigenId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Seleccione un área de origen')),
-      );
+      _showSnack('Seleccione un área de origen', background: Colors.orange);
       return;
     }
 
@@ -256,19 +254,54 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
           return;
         }
 
+        // Validar que el número correlativo no esté vacío
+        if (_numeroCorrelativoController.text.trim().isEmpty) {
+          _showSnack(
+            'El número correlativo es obligatorio',
+            background: Colors.orange,
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Validar que la gestión no esté vacía
+        if (_gestionController.text.trim().isEmpty) {
+          _showSnack(
+            'La gestión es obligatoria',
+            background: Colors.orange,
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        print('DEBUG: Creando documento con datos:');
+        print('- numeroCorrelativo: ${_numeroCorrelativoController.text}');
+        print('- tipoDocumentoId: $_tipoDocumentoId');
+        print('- areaOrigenId: $_areaOrigenId');
+        print('- gestion: ${_gestionController.text}');
+        print('- fechaDocumento: $_fechaDocumento');
+        print('- responsableId: $_responsableId');
+        print('- carpetaId: $_carpetaId');
+        print('- nivelConfidencialidad: $_nivelConfidencialidad');
+
         // Crear
         final dto = CreateDocumentoDTO(
-          numeroCorrelativo: _numeroCorrelativoController.text,
+          numeroCorrelativo: _numeroCorrelativoController.text.trim(),
           tipoDocumentoId: _tipoDocumentoId!,
           areaOrigenId: _areaOrigenId!,
-          gestion: _gestionController.text,
+          gestion: _gestionController.text.trim(),
           fechaDocumento: _fechaDocumento,
-          descripcion: _descripcionController.text,
+          descripcion: _descripcionController.text.trim().isEmpty 
+              ? null 
+              : _descripcionController.text.trim(),
           responsableId: _responsableId,
-          ubicacionFisica: _ubicacionFisicaController.text,
+          ubicacionFisica: _ubicacionFisicaController.text.trim().isEmpty 
+              ? null 
+              : _ubicacionFisicaController.text.trim(),
           carpetaId: _carpetaId,
           nivelConfidencialidad: _nivelConfidencialidad,
         );
+        
         final newDoc = await documentoService.create(dto);
 
         if (_pickedFile != null) {
@@ -284,20 +317,71 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
           final dataProvider = Provider.of<DataProvider>(context, listen: false);
           dataProvider.refresh();
           
-          _showSnack('Documento creado con exito', background: Colors.green);
+          _showSnack('Documento creado con éxito', background: Colors.green);
           Navigator.pop(context, true);
         }
       } else {
         // Actualizar
         final dto = UpdateDocumentoDTO(
-          numeroCorrelativo: _numeroCorrelativoController.text,
+          numeroCorrelativo: _numeroCorrelativoController.text.trim().isEmpty 
+              ? null 
+              : _numeroCorrelativoController.text.trim(),
           tipoDocumentoId: _tipoDocumentoId,
           areaOrigenId: _areaOrigenId,
-          gestion: _gestionController.text,
+          gestion: _gestionController.text.trim().isEmpty 
+              ? null 
+              : _gestionController.text.trim(),
           fechaDocumento: _fechaDocumento,
-          descripcion: _descripcionController.text,
+          descripcion: _descripcionController.text.trim().isEmpty 
+              ? null 
+              : _descripcionController.text.trim(),
           responsableId: _responsableId,
-          ubicacionFisica: _ubicacionFisicaController.text,
+          ubicacionFisica: _ubicacionFisicaController.text.trim().isEmpty 
+              ? null 
+              : _ubicacionFisicaController.text.trim(),
+          carpetaId: _carpetaId,
+          nivelConfidencialidad: _nivelConfidencialidad,
+        );
+
+        await documentoService.update(widget.documento!.id, dto);
+
+        if (mounted) {
+          // Notificar al DataProvider
+          final dataProvider = Provider.of<DataProvider>(context, listen: false);
+          dataProvider.refresh();
+          
+          _showSnack('Documento actualizado con éxito', background: Colors.green);
+          Navigator.pop(context, true);
+        }
+      }
+    } catch (e) {
+      print('DEBUG: Error guardando documento: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        String errorMessage = 'Error al guardar documento';
+        
+        // Mejorar el mensaje de error basado en el tipo
+        if (e.toString().contains('400')) {
+          errorMessage = 'Datos inválidos. Verifique que todos los campos requeridos estén completos.';
+        } else if (e.toString().contains('500')) {
+          errorMessage = 'Error del servidor. Intente nuevamente.';
+        } else if (e.toString().contains('network') || e.toString().contains('connection')) {
+          errorMessage = 'Error de conexión. Verifique su conexión a internet.';
+        }
+        
+        _showSnack(
+          '$errorMessage\n\nDetalle: ${e.toString()}',
+          background: Colors.red,
+          duration: 6,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
           carpetaId: _carpetaId,
           nivelConfidencialidad: _nivelConfidencialidad,
         );
@@ -832,12 +916,13 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
     );
   }
 
-  void _showSnack(String message, {Color background = Colors.blue}) {
+  void _showSnack(String message, {Color background = Colors.blue, int duration = 3}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: background,
         behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: duration),
         content: Row(
           children: [
             Icon(
@@ -851,9 +936,15 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
               color: Colors.white,
             ),
             const SizedBox(width: 12),
-            Expanded(child: Text(message)),
+            Expanded(child: Text(message, maxLines: 4, overflow: TextOverflow.ellipsis)),
           ],
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
       ),
     );
   }
