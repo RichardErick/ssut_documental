@@ -1296,18 +1296,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     );
   }
 
-  Future<void> _crearSubcarpeta(int padreId) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CarpetaFormScreen(padreId: padreId),
-      ),
-    );
-    if (result == true) {
-      _cargarSubcarpetas(padreId);
-      _cargarCarpetas();
-    }
-  }
+
 
   Future<void> _confirmarEliminarSubcarpeta(Carpeta carpeta) async {
     final confirm = await showDialog<bool>(
