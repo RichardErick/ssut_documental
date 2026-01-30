@@ -43,8 +43,24 @@ class _CarpetasViewState extends State<CarpetasView> {
     );
 
     if (result == true) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Reload data
       await _controller.loadCarpetas();
+      
+      // Force UI refresh
+      if (mounted) {
+        setState(() {});
+      }
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Carpeta creada exitosamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -241,18 +257,19 @@ class _CarpetasViewState extends State<CarpetasView> {
                     ],
                   ),
                 ),
-                // DELETE MODULE BUTTON
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.shade200, width: 2),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.delete_forever,
-                        color: Colors.red, size: 28),
-                    tooltip: 'Eliminar Módulo Completo',
-                    onPressed: () => _confirmarEliminarCarpeta(carpeta),
+                // DELETE MODULE BUTTON - MUY VISIBLE
+                ElevatedButton.icon(
+                  onPressed: () => _confirmarEliminarCarpeta(carpeta),
+                  icon: const Icon(Icons.delete_forever, size: 20),
+                  label: const Text('BORRAR'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 4,
                   ),
                 ),
               ],
@@ -312,21 +329,19 @@ class _CarpetasViewState extends State<CarpetasView> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // DELETE SUBCARPETA BUTTON
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade200, width: 1.5),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: Colors.red, size: 22),
-                tooltip: 'Eliminar Subcarpeta',
-                onPressed: () => _confirmarEliminarCarpeta(subcarpeta),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                padding: EdgeInsets.zero,
+            // DELETE SUBCARPETA BUTTON - MUY VISIBLE
+            ElevatedButton.icon(
+              onPressed: () => _confirmarEliminarCarpeta(subcarpeta),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('BORRAR'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: const Size(0, 36),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
             ),
             const Icon(Icons.chevron_right, color: Colors.grey),
@@ -380,13 +395,25 @@ class _CarpetasViewState extends State<CarpetasView> {
     try {
       await _controller.deleteCarpeta(carpeta.id, hard: true);
       if (!mounted) return;
+      
+      // Force UI refresh
+      setState(() {});
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Carpeta eliminada')),
+        const SnackBar(
+          content: Text('Carpeta eliminada exitosamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo eliminar: $e')),
+        SnackBar(
+          content: Text('No se pudo eliminar: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
       );
     }
   }
