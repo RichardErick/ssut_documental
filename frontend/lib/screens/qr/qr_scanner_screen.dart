@@ -50,14 +50,41 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     try {
       final service = Provider.of<DocumentoService>(context, listen: false);
       
+      // Limpiar el código QR
+      String codigoLimpio = codigoQr.trim();
+      
+      print('DEBUG: Código QR original: $codigoLimpio');
+      
       // Verificar si es un link compartible
-      if (codigoQr.startsWith('DOC-SHARE:')) {
-        await _procesarLinkCompartible(codigoQr);
+      if (codigoLimpio.startsWith('DOC-SHARE:')) {
+        await _procesarLinkCompartible(codigoLimpio);
         return;
       }
       
-      // Búsqueda normal por QR
-      final documento = await service.getByQRCode(codigoQr);
+      // Si es una URL completa, extraer el código del documento
+      if (codigoLimpio.startsWith('http')) {
+        // Formato: http://localhost:5286/documentos/ver/CI-CONT-2026-0001
+        final partes = codigoLimpio.split('/');
+        if (partes.isNotEmpty) {
+          codigoLimpio = partes.last;
+        }
+      }
+      
+      print('DEBUG: Código procesado: $codigoLimpio');
+      
+      // Intentar buscar por IdDocumento (que es el código)
+      Documento? documento;
+      try {
+        documento = await service.getByIdDocumento(codigoLimpio);
+      } catch (e) {
+        print('DEBUG: Error buscando por IdDocumento: $e');
+        // Si falla, intentar buscar por QR
+        try {
+          documento = await service.getByQRCode(codigoLimpio);
+        } catch (e2) {
+          print('DEBUG: Error buscando por QR: $e2');
+        }
+      }
 
       if (!mounted) return;
 
@@ -69,6 +96,23 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           ),
         );
         _qrCodeController.clear();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Text('Documento encontrado: ${documento.codigo}'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -78,18 +122,19 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'El código QR no corresponde a un documento del sistema.\nContenido leído: $codigoQr',
+                    'No se encontró documento con código: $codigoLimpio\n\nVerifica que el código sea correcto.',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            backgroundColor: Colors.red.shade600,
+            backgroundColor: Colors.orange.shade600,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -103,7 +148,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    ErrorHelper.getErrorMessage(e),
+                    'Error en búsqueda: ${ErrorHelper.getErrorMessage(e)}',
                     style: const TextStyle(fontSize: 14),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
