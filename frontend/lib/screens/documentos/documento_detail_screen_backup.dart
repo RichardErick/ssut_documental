@@ -913,8 +913,9 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                   ),
                   child: pw.Text(
                     qrData,
-                    style: const pw.TextStyle(
+                    style: pw.TextStyle(
                       fontSize: 10,
+                      font: pw.Font.courier(),
                     ),
                     textAlign: pw.TextAlign.center,
                   ),
@@ -959,14 +960,14 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
           ? qrData 
           : widget.documento.codigo;
       
-      // Generar imagen PNG real usando Canvas
+      // Generar imagen PNG real
       final qrImageBytes = await _generarImagenPNGReal(qrDataSafe, doc);
       
-      // Descargar como PNG
-      await _descargarArchivo(qrImageBytes, 'QR_${doc.codigo}.png');
+      // Descargar como PDF optimizado
+      await _descargarArchivo(qrImageBytes, 'QR_${doc.codigo}_optimizado.pdf');
       
       _showNotification(
-        'QR descargado: QR_${doc.codigo}.png (compatible con scanner)',
+        'QR descargado: QR_${doc.codigo}_optimizado.pdf (compatible con scanner)',
         background: AppTheme.colorExito,
       );
       
@@ -980,21 +981,14 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
 
   Future<Uint8List> _generarImagenPNGReal(String qrData, Documento doc) async {
     try {
-      // Crear una imagen PNG real usando la librería image
-      const size = 400;
-      const qrSize = 300;
-      const padding = (size - qrSize) ~/ 2;
+      // Enfoque más simple: usar solo la librería image para crear una imagen básica
+      // y luego usar el PDF como fallback
       
-      // Crear imagen base blanca
-      final image = img.Image(width: size, height: size);
-      img.fill(image, color: img.ColorRgb8(255, 255, 255));
-      
-      // Generar datos del QR usando qr_flutter internamente
-      // Por simplicidad, vamos a usar un PDF optimizado que sea más compatible
+      // Por ahora, vamos a generar un PDF optimizado que sea más compatible
       return await _generarPDFOptimizado(qrData, doc);
       
     } catch (e) {
-      print('Error generando imagen PNG: $e');
+      print('Error generando imagen: $e');
       // Fallback: PDF simple
       return await _generarImagenSimplePDF(qrData);
     }
@@ -1049,8 +1043,9 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                 ),
                 child: pw.Text(
                   qrData,
-                  style: const pw.TextStyle(
+                  style: pw.TextStyle(
                     fontSize: 12,
+                    font: pw.Font.courier(),
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
@@ -2158,7 +2153,7 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _descargarCodigoQR(doc),
                     icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
-                    label: const Text('PDF Info'),
+                    label: const Text('PDF'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.purple.shade700,
                       side: BorderSide(color: Colors.purple.shade300),
@@ -2170,12 +2165,12 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                // Botón PNG - COMPATIBLE CON SCANNER
+                // Botón Imagen PNG (verde) - COMPATIBLE CON SCANNER
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _descargarCodigoQRImagen(doc),
                     icon: const Icon(Icons.qr_code_2_rounded, size: 16),
-                    label: const Text('PNG QR'),
+                    label: const Text('QR'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.green.shade700,
                       side: BorderSide(color: Colors.green.shade300),
