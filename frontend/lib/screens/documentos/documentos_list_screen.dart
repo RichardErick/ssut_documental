@@ -248,14 +248,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       builder: (context, dataProvider, child) {
         return Scaffold(
           backgroundColor: Colors.transparent,
-          floatingActionButton: _carpetaSeleccionada != null && canCreate 
-            ? FloatingActionButton.extended(
-                onPressed: () => _agregarDocumento(_carpetaSeleccionada!),
-                icon: const Icon(Icons.add_circle_outline_rounded),
-                label: const Text('Nuevo Documento'),
-                backgroundColor: Colors.blue.shade700,
-              )
-            : null,
+          floatingActionButton: _buildFloatingActionButton(canCreate),
           body: Column(
             children: [
               _construirFiltrosSuperior(theme, canCreate),
@@ -631,50 +624,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                   ],
                 ),
               ),
-              
-              // Botón de nueva subcarpeta
-              if (carpeta.carpetaPadreId == null && 
-                  Provider.of<AuthProvider>(context, listen: false).hasPermission('crear_carpeta'))
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.amber.shade600, Colors.amber.shade800],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _crearSubcarpeta(carpeta.id),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.create_new_folder_outlined, color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Nueva Subcarpeta',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
           
@@ -884,33 +833,6 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    // Botón para crear documento
-                    if (canCreate)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 32,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _agregarDocumento(sub),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 2,
-                          ),
-                          icon: const Icon(Icons.add, size: 16),
-                          label: Text(
-                            'Nuevo Doc',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -2115,5 +2037,40 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
   bool _canCreateDocument() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     return authProvider.hasPermission('subir_documento');
+  }
+
+  Widget? _buildFloatingActionButton(bool canCreate) {
+    if (!canCreate) return null;
+
+    // Nivel 1: Vista principal de carpetas padre - Solo crear carpeta
+    if (_carpetaSeleccionada == null) {
+      return FloatingActionButton.extended(
+        onPressed: () => _abrirNuevaCarpeta(),
+        icon: const Icon(Icons.create_new_folder_rounded),
+        label: const Text('Nueva Carpeta'),
+        backgroundColor: Colors.amber.shade800,
+        heroTag: 'fab_carpeta',
+      );
+    }
+
+    // Nivel 2: Dentro de carpeta padre (viendo subcarpetas) - Solo crear subcarpeta
+    if (_carpetaSeleccionada!.carpetaPadreId == null) {
+      return FloatingActionButton.extended(
+        onPressed: () => _crearSubcarpeta(_carpetaSeleccionada!.id),
+        icon: const Icon(Icons.create_new_folder_outlined),
+        label: const Text('Nueva Subcarpeta'),
+        backgroundColor: Colors.orange.shade700,
+        heroTag: 'fab_subcarpeta',
+      );
+    }
+
+    // Nivel 3: Dentro de subcarpeta - Solo crear documento
+    return FloatingActionButton.extended(
+      onPressed: () => _agregarDocumento(_carpetaSeleccionada!),
+      icon: const Icon(Icons.add_circle_outline_rounded),
+      label: const Text('Nuevo Documento'),
+      backgroundColor: Colors.blue.shade700,
+      heroTag: 'fab_documento',
+    );
   }
 }

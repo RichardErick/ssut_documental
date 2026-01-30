@@ -332,6 +332,9 @@ class AuthProvider extends ChangeNotifier {
   UserRole _parseRoleWithContext(String roleName, String username, String fullName) {
     print('DEBUG: Parseando rol: "$roleName" para usuario: "$username" ($fullName)');
     final roleNameLower = roleName.toLowerCase().trim();
+    final usernameLower = username.toLowerCase().trim();
+    final fullNameLower = fullName.toLowerCase().trim();
+    
     switch (roleNameLower) {
       case 'administradorsistema':
       case 'administrador sistema':
@@ -350,12 +353,22 @@ class AuthProvider extends ChangeNotifier {
       case 'admin':
       case 'administrator':
         // Para el rol genérico "Administrador", usar contexto del usuario
-        if (username.toLowerCase() == 'admin' || 
-            fullName.toLowerCase().contains('sistema')) {
-          print('DEBUG: Rol "Administrador" mapeado a AdministradorSistema por contexto');
+        // Si el nombre completo contiene "documentos" o el username es "doc_admin", es admin de documentos
+        if (fullNameLower.contains('documentos') || 
+            fullNameLower.contains('documento') ||
+            usernameLower == 'doc_admin' ||
+            usernameLower.contains('doc')) {
+          print('DEBUG: Rol "Administrador" mapeado a AdministradorDocumentos por contexto (documentos)');
+          return UserRole.administradorDocumentos;
+        }
+        // Si el nombre completo contiene "sistema" o el username es "admin", es admin de sistema
+        else if (fullNameLower.contains('sistema') || 
+                 usernameLower == 'admin') {
+          print('DEBUG: Rol "Administrador" mapeado a AdministradorSistema por contexto (sistema)');
           return UserRole.administradorSistema;
         } else {
-          print('DEBUG: Rol "Administrador" mapeado a AdministradorDocumentos por contexto');
+          // Por defecto, si no hay contexto claro, asignar AdministradorDocumentos
+          print('DEBUG: Rol "Administrador" mapeado a AdministradorDocumentos por defecto');
           return UserRole.administradorDocumentos;
         }
       case 'contador':
