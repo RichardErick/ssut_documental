@@ -3,8 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/carpeta.dart';
+import '../../../models/user_role.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../services/carpeta_service.dart';
-import '../controllers/carpetas_controller.dart';
+import '../../../controllers/carpetas/carpetas_controller.dart';
 import '../carpeta_form_screen.dart';
 import '../documentos_list_screen.dart';
 
@@ -19,13 +21,27 @@ class CarpetasView extends StatefulWidget {
 class _CarpetasViewState extends State<CarpetasView> {
   late CarpetasController _controller;
   String _gestionSeleccionada = '2025';
+  
+  // Constantes para módulos
+  static const String _moduloEgresos = 'Comprobante de Egreso';
+  static const String _moduloIngresos = 'Comprobante de Ingreso';
+  static const List<String> _gestionesVisibles = ['2024', '2025', '2026'];
+
+  bool get _hasMainFolder {
+    final carpetas = _getCarpetasForGestion(_gestionSeleccionada);
+    return carpetas.any((c) => c.carpetaPadreId == null);
+  }
+
+  List<Carpeta> _getCarpetasForGestion(String gestion) {
+    return _controller.carpetas.where((c) => c.gestion == gestion).toList();
+  }
 
   @override
   void initState() {
     super.initState();
     final carpetaService = Provider.of<CarpetaService>(context, listen: false);
-    _controller = CarpetasController(carpetaService);
-    _controller.loadCarpetas();
+    _controller = CarpetasController(service: carpetaService);
+    _controller.cargarCarpetas();
   }
 
   @override
@@ -44,7 +60,7 @@ class _CarpetasViewState extends State<CarpetasView> {
 
     if (result == true) {
       // Reload data
-      await _controller.loadCarpetas();
+      await _controller.cargarCarpetas();
       
       // Force UI refresh
       if (mounted) {
@@ -84,7 +100,7 @@ class _CarpetasViewState extends State<CarpetasView> {
                     fontWeight: FontWeight.bold,
                   ),
                   underline: Container(),
-                  items: CarpetasController.gestionesVisibles.map((gestion) {
+                  items: _gestionesVisibles.map((gestion) {
                     return DropdownMenuItem(
                       value: gestion,
                       child: Text('Gestión $gestion'),
@@ -99,11 +115,11 @@ class _CarpetasViewState extends State<CarpetasView> {
               ),
               IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: _controller.loadCarpetas,
+                onPressed: _controller.cargarCarpetas,
               ),
             ],
           ),
-          floatingActionButton: !_controller.hasCarpetas || !_controller.hasMainFolder
+          floatingActionButton: _controller.carpetas.isEmpty || !_hasMainFolder
               ? FloatingActionButton.extended(
                   onPressed: () => _crearCarpeta(),
                   icon: const Icon(Icons.create_new_folder),
@@ -114,7 +130,7 @@ class _CarpetasViewState extends State<CarpetasView> {
           body: _controller.isLoading
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
-                  onRefresh: _controller.loadCarpetas,
+                  onRefresh: _controller.cargarCarpetas,
                   child: _buildModularView(),
                 ),
         );
@@ -123,14 +139,14 @@ class _CarpetasViewState extends State<CarpetasView> {
   }
 
   Widget _buildModularView() {
-    final carpetas = _controller.getCarpetasForGestion(_gestionSeleccionada);
+    final carpetas = _getCarpetasForGestion(_gestionSeleccionada);
 
     // Separate by modules
     final carpetaEgresos = carpetas
-        .where((c) => c.nombre == CarpetasController.moduloEgresos)
+        .where((c) => c.nombre == _moduloEgresos)
         .firstOrNull;
     final carpetaIngresos = carpetas
-        .where((c) => c.nombre == CarpetasController.moduloIngresos)
+        .where((c) => c.nombre == _moduloIngresos)
         .firstOrNull;
 
     return ListView(
@@ -165,7 +181,7 @@ class _CarpetasViewState extends State<CarpetasView> {
         // Egresos Module
         if (carpetaEgresos != null)
           _buildModuloCard(
-            CarpetasController.moduloEgresos,
+            _moduloEgresos,
             carpetaEgresos,
             Colors.red,
             Icons.arrow_upward,
@@ -176,7 +192,7 @@ class _CarpetasViewState extends State<CarpetasView> {
         // Ingresos Module
         if (carpetaIngresos != null)
           _buildModuloCard(
-            CarpetasController.moduloIngresos,
+            _moduloIngresos,
             carpetaIngresos,
             Colors.green,
             Icons.arrow_downward,
@@ -209,6 +225,10 @@ class _CarpetasViewState extends State<CarpetasView> {
 
   Widget _buildModuloCard(
       String nombre, Carpeta carpeta, Color color, IconData icon) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final canDelete = authProvider.hasPermission('borrar_documento') || 
+                      authProvider.role == UserRole.administradorSistema;
+
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -258,26 +278,27 @@ class _CarpetasViewState extends State<CarpetasView> {
                   ),
                 ),
                 // DELETE MODULE BUTTON - MUY VISIBLE
-                ElevatedButton.icon(
-                  onPressed: () => _confirmarEliminarCarpeta(carpeta),
-                  icon: const Icon(Icons.delete_forever, size: 20),
-                  label: const Text('BORRAR'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade600,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                if (canDelete)
+                  ElevatedButton.icon(
+                    onPressed: () => _confirmarEliminarCarpeta(carpeta),
+                    icon: const Icon(Icons.delete_forever, size: 20),
+                    label: const Text('BORRAR'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 4,
                     ),
-                    elevation: 4,
                   ),
-                ),
               ],
             ),
           ),
           // Subcarpetas
           if (carpeta.subcarpetas.isNotEmpty)
-            ...carpeta.subcarpetas.map((sub) => _buildSubcarpetaItem(sub, color))
+            ...carpeta.subcarpetas.map((sub) => _buildSubcarpetaItem(sub, color, canDelete))
           else
             Padding(
               padding: const EdgeInsets.all(24),
@@ -291,7 +312,7 @@ class _CarpetasViewState extends State<CarpetasView> {
     );
   }
 
-  Widget _buildSubcarpetaItem(Carpeta subcarpeta, Color moduleColor) {
+  Widget _buildSubcarpetaItem(Carpeta subcarpeta, Color moduleColor, bool canDelete) {
     return Container(
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
@@ -330,20 +351,21 @@ class _CarpetasViewState extends State<CarpetasView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // DELETE SUBCARPETA BUTTON - MUY VISIBLE
-            ElevatedButton.icon(
-              onPressed: () => _confirmarEliminarCarpeta(subcarpeta),
-              icon: const Icon(Icons.delete_outline, size: 18),
-              label: const Text('BORRAR'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade600,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                minimumSize: const Size(0, 36),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
+            if (canDelete)
+              ElevatedButton.icon(
+                onPressed: () => _confirmarEliminarCarpeta(subcarpeta),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('BORRAR'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: const Size(0, 36),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                 ),
               ),
-            ),
             const Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),
@@ -354,7 +376,7 @@ class _CarpetasViewState extends State<CarpetasView> {
               builder: (context) =>
                   DocumentosListScreen(initialCarpetaId: subcarpeta.id),
             ),
-          ).then((_) => _controller.loadCarpetas());
+          ).then((_) => _controller.cargarCarpetas());
         },
       ),
     );
@@ -393,7 +415,7 @@ class _CarpetasViewState extends State<CarpetasView> {
 
   Future<void> _eliminarCarpeta(Carpeta carpeta) async {
     try {
-      await _controller.deleteCarpeta(carpeta.id, hard: true);
+      await _controller.eliminarCarpeta(carpeta);
       if (!mounted) return;
       
       // Force UI refresh

@@ -21,6 +21,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
   // Controladores
   final _nombreController = TextEditingController();
   final _gestionController = TextEditingController();
+  final _anoController = TextEditingController();
   final _descripcionController = TextEditingController();
   final _codigoRomanoController = TextEditingController();
   
@@ -33,7 +34,13 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
   @override
   void initState() {
     super.initState();
-    _gestionController.text = DateTime.now().year.toString();
+    final currentYear = DateTime.now().year;
+    _gestionController.text = currentYear.toString();
+    _anoController.text = currentYear.toString();
+    
+    // Sincronizar gestión y año
+    _gestionController.addListener(_syncGestionToAno);
+    _anoController.addListener(_syncAnoToGestion);
     
     if (widget.padreId == null) {
       // Es carpeta principal
@@ -44,10 +51,30 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
     }
   }
 
+  void _syncGestionToAno() {
+    if (_gestionController.text != _anoController.text) {
+      _anoController.removeListener(_syncAnoToGestion);
+      _anoController.text = _gestionController.text;
+      _anoController.addListener(_syncAnoToGestion);
+    }
+  }
+
+  void _syncAnoToGestion() {
+    if (_anoController.text != _gestionController.text) {
+      _gestionController.removeListener(_syncGestionToAno);
+      _gestionController.text = _anoController.text;
+      _gestionController.addListener(_syncGestionToAno);
+    }
+  }
+
   @override
   void dispose() {
+    _gestionController.removeListener(_syncGestionToAno);
+    _anoController.removeListener(_syncAnoToGestion);
+    
     _nombreController.dispose();
     _gestionController.dispose();
+    _anoController.dispose();
     _descripcionController.dispose();
     _codigoRomanoController.dispose();
     _rangoInicioController.dispose();
@@ -65,7 +92,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
       
       // Validaciones especificas
       if (widget.padreId == null) {
-        // Verificar si ya existe carpeta principal del año
+        // Verificar si ya existe carpeta principal del año/gestión
         final carpetas = await carpetaService.getAll(gestion: _gestionController.text);
         if (carpetas.any((c) => c.nombre == _nombreController.text && c.carpetaPadreId == null)) {
            throw Exception('Ya existe una carpeta "${_nombreController.text}" para la gestión ${_gestionController.text}.');
@@ -91,7 +118,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
       final dto = CreateCarpetaDTO(
         nombre: _nombreController.text,
         codigo: _codigoRomanoController.text.isNotEmpty ? _codigoRomanoController.text : null,
-        gestion: _gestionController.text,
+        gestion: _gestionController.text, // Usar gestión como campo principal
         descripcion: _descripcionController.text.isNotEmpty ? _descripcionController.text : null,
         carpetaPadreId: widget.padreId,
         rangoInicio: rInicio,
@@ -143,7 +170,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                   _buildInfoCard(theme, esPrincipal),
                   const SizedBox(height: 24),
 
-                  // Nombre de la carpeta (siempre editable)
+                  // Nombre de la carpeta
                   TextFormField(
                     controller: _nombreController,
                     decoration: _inputDecoration('Nombre de Carpeta', icon: Icons.folder),
@@ -159,16 +186,42 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                   
                   const SizedBox(height: 20),
 
-                  // Gestión (Año)
+                  // Gestión (editable)
                   TextFormField(
                     controller: _gestionController,
-                    readOnly: true,
-                    decoration: _inputDecoration('Gestión (Año)', icon: Icons.calendar_today),
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                    decoration: _inputDecoration('Gestión', icon: Icons.business_center),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'La gestión es requerida';
+                      final year = int.tryParse(v);
+                      if (year == null) return 'Ingrese un año válido';
+                      if (year < 2020 || year > 2030) return 'El año debe estar entre 2020 y 2030';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'La gestión se asigna automáticamente al año actual',
+                    'Ej: 2025, 2026, etc. (Período administrativo)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                  ),
+                  
+                  const SizedBox(height: 20),
+
+                  // Año (editable)
+                  TextFormField(
+                    controller: _anoController,
+                    keyboardType: TextInputType.number,
+                    decoration: _inputDecoration('Año', icon: Icons.calendar_today),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'El año es requerido';
+                      final year = int.tryParse(v);
+                      if (year == null) return 'Ingrese un año válido';
+                      if (year < 2020 || year > 2030) return 'El año debe estar entre 2020 y 2030';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Año fiscal o calendario (2020-2030)',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
                   ),
                   
@@ -291,7 +344,7 @@ class _CarpetaFormScreenState extends State<CarpetaFormScreen> {
                 ),
                 Text(
                   esPrincipal 
-                    ? 'Contenedor principal para los comprobantes de una gestión.'
+                    ? 'Contenedor principal con nombre, gestión y año específicos.'
                     : 'Agrupación de documentos por rango numérico.',
                   style: GoogleFonts.inter(fontSize: 12, color: Colors.black87),
                 ),
