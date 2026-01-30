@@ -244,6 +244,36 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     setState(() => _isSearching = true);
     try {
       final bytes = await file.readAsBytes();
+      
+      // Verificar si es un PDF
+      if (bytes.length > 4 && 
+          bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Archivo PDF detectado. Para leer QR de PDFs, abra el PDF y tome una captura de pantalla del código QR, luego seleccione esa imagen.',
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.blue.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
+        return;
+      }
+      
       final codigo = _extraerQrDeBytes(bytes);
 
       if (!mounted) return;
@@ -255,12 +285,19 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               children: [
                 Icon(Icons.warning_amber_rounded, color: Colors.white),
                 SizedBox(width: 12),
-                Expanded(child: Text('No se pudo leer un QR en la imagen')),
+                Expanded(
+                  child: Text(
+                    'No se pudo leer un QR en la imagen. Asegúrese de que:\n• La imagen sea clara y bien iluminada\n• El código QR esté completo y visible\n• No sea un archivo PDF',
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.orange.shade700,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 5),
           ),
         );
         return;
@@ -297,6 +334,13 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
   String? _extraerQrDeBytes(Uint8List bytes) {
     try {
+      // Primero verificar si es un PDF
+      if (bytes.length > 4 && 
+          bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46) {
+        print('Archivo detectado como PDF - no se puede procesar como imagen');
+        return null;
+      }
+      
       // Intentar decodificar como imagen
       final decoded = img.decodeImage(bytes);
       if (decoded == null) {
@@ -321,26 +365,34 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       } catch (e) {
         print('Error decodificando QR con HybridBinarizer: $e');
         
-        // Si falla, intentar procesamiento de imagen mejorado
+        // Si falla, intentar con GlobalHistogramBinarizer
         try {
-          // Mejorar contraste de la imagen
-          final enhancedImage = _mejorarImagenParaQR(decoded);
-          final enhancedPixels = enhancedImage
-              .getBytes(order: img.ChannelOrder.abgr)
-              .buffer
-              .asInt32List();
-          
-          final enhancedSource = RGBLuminanceSource(
-            enhancedImage.width, 
-            enhancedImage.height, 
-            enhancedPixels
-          );
-          final enhancedBitmap = BinaryBitmap(HybridBinarizer(enhancedSource));
-          final result2 = QRCodeReader().decode(enhancedBitmap);
+          final bitmap2 = BinaryBitmap(GlobalHistogramBinarizer(source));
+          final result2 = QRCodeReader().decode(bitmap2);
           return result2.text.trim();
         } catch (e2) {
-          print('Error con imagen mejorada: $e2');
-          return null;
+          print('Error con GlobalHistogramBinarizer: $e2');
+          
+          // Último intento: mejorar la imagen y probar de nuevo
+          try {
+            final enhancedImage = _mejorarImagenParaQR(decoded);
+            final enhancedPixels = enhancedImage
+                .getBytes(order: img.ChannelOrder.abgr)
+                .buffer
+                .asInt32List();
+            
+            final enhancedSource = RGBLuminanceSource(
+              enhancedImage.width, 
+              enhancedImage.height, 
+              enhancedPixels
+            );
+            final enhancedBitmap = BinaryBitmap(HybridBinarizer(enhancedSource));
+            final result3 = QRCodeReader().decode(enhancedBitmap);
+            return result3.text.trim();
+          } catch (e3) {
+            print('Error con imagen mejorada: $e3');
+            return null;
+          }
         }
       }
     } catch (e) {
@@ -353,11 +405,17 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     // Convertir a escala de grises
     var processed = img.grayscale(original);
     
-    // Aumentar contraste
-    processed = img.contrast(processed, contrast: 150);
+    // Aumentar contraste significativamente
+    processed = img.contrast(processed, contrast: 200);
     
-    // Aplicar threshold para binarizar
+    // Aplicar threshold para binarizar (convertir a blanco y negro puro)
     processed = img.threshold(processed, threshold: 128);
+    
+    // Aplicar un filtro de mediana para reducir ruido
+    processed = img.gaussianBlur(processed, radius: 1);
+    
+    // Segundo threshold después del blur
+    processed = img.threshold(processed, threshold: 140);
     
     return processed;
   }
@@ -606,21 +664,39 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                             width: 1,
                           ),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.info_outline_rounded,
-                              color: Colors.blue.shade700,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                'En la versión web, puede ingresar el código QR manualmente o pegar un link compartible de documento. Para usar el escáner de cámara, acceda desde un dispositivo móvil.',
-                                style: TextStyle(
-                                  color: Colors.blue.shade900,
-                                  fontSize: 13,
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  color: Colors.blue.shade700,
+                                  size: 24,
                                 ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    'Instrucciones para usar códigos QR',
+                                    style: TextStyle(
+                                      color: Colors.blue.shade900,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '• Para archivos PDF: Abra el PDF, tome una captura de pantalla del QR y seleccione esa imagen\n'
+                              '• Para imágenes PNG/JPG: Seleccione directamente la imagen del QR\n'
+                              '• También puede copiar y pegar el código QR manualmente\n'
+                              '• Los links compartibles (DOC-SHARE:...) funcionan directamente',
+                              style: TextStyle(
+                                color: Colors.blue.shade800,
+                                fontSize: 13,
+                                height: 1.4,
                               ),
                             ),
                           ],
