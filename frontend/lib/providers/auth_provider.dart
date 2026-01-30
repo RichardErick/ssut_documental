@@ -216,7 +216,9 @@ class AuthProvider extends ChangeNotifier {
       }
 
       final roleString = (user['rol'] as String?) ?? 'Invitado';
-      _role = _parseRole(roleString);
+      final username = (user['nombreUsuario'] as String?) ?? '';
+      final fullName = (user['nombreCompleto'] as String?) ?? '';
+      _role = _parseRoleWithContext(roleString, username, fullName);
 
       apiService.setAuthToken(_token!);
 
@@ -327,16 +329,13 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  UserRole _parseRole(String roleName) {
-    print('DEBUG: Parseando rol: "$roleName"'); // Debug temporal
+  UserRole _parseRoleWithContext(String roleName, String username, String fullName) {
+    print('DEBUG: Parseando rol: "$roleName" para usuario: "$username" ($fullName)');
     final roleNameLower = roleName.toLowerCase().trim();
     switch (roleNameLower) {
       case 'administradorsistema':
       case 'administrador sistema':
       case 'admin sistema':
-      case 'administrador':
-      case 'admin':
-      case 'administrator':
       case 'system admin':
       case 'sysadmin':
         print('DEBUG: Rol mapeado a AdministradorSistema');
@@ -347,6 +346,18 @@ class AuthProvider extends ChangeNotifier {
       case 'document admin':
         print('DEBUG: Rol mapeado a AdministradorDocumentos');
         return UserRole.administradorDocumentos;
+      case 'administrador':
+      case 'admin':
+      case 'administrator':
+        // Para el rol genérico "Administrador", usar contexto del usuario
+        if (username.toLowerCase() == 'admin' || 
+            fullName.toLowerCase().contains('sistema')) {
+          print('DEBUG: Rol "Administrador" mapeado a AdministradorSistema por contexto');
+          return UserRole.administradorSistema;
+        } else {
+          print('DEBUG: Rol "Administrador" mapeado a AdministradorDocumentos por contexto');
+          return UserRole.administradorDocumentos;
+        }
       case 'contador':
       case 'accountant':
         print('DEBUG: Rol mapeado a Contador');
@@ -356,9 +367,13 @@ class AuthProvider extends ChangeNotifier {
         print('DEBUG: Rol mapeado a Gerente');
         return UserRole.gerente;
       default:
-        print('DEBUG: Rol no reconocido: "$roleName", asignando AdministradorSistema por defecto');
-        // Si el rol no existe, asignar como Administrador de Sistema por defecto para admin users
-        return UserRole.administradorSistema;
+        print('DEBUG: Rol no reconocido: "$roleName", asignando AdministradorDocumentos por defecto');
+        return UserRole.administradorDocumentos;
     }
+  }
+
+  UserRole _parseRole(String roleName) {
+    // Función de compatibilidad que llama a la nueva función con contexto vacío
+    return _parseRoleWithContext(roleName, '', '');
   }
 }
