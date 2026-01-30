@@ -368,6 +368,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildUserAvatar(ThemeData theme) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
+    
     return PopupMenuButton<String>(
       offset: const Offset(0, 50),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -378,11 +381,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 16,
               backgroundColor: AppTheme.colorPrimario,
-              child: Icon(Icons.person, size: 20, color: Colors.white),
+              child: Text(
+                user?['nombreUsuario']?[0]?.toUpperCase() ?? 'U',
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(width: 8),
             Icon(
@@ -393,40 +400,64 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
       ),
-      onSelected: (value) {
+      onSelected: (value) async {
         if (value == 'logout') {
-          Provider.of<AuthProvider>(context, listen: false).logout();
-          Navigator.of(context).pushReplacementNamed('/login');
+          // Mostrar diálogo de confirmación
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Cerrar Sesión'),
+              content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Cerrar Sesión'),
+                ),
+              ],
+            ),
+          );
+          
+          if (confirmed == true) {
+            await authProvider.logout();
+            if (mounted) {
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            }
+          }
         } else if (value == 'profile') {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => const ProfileScreen()),
           );
         }
       },
-      itemBuilder:
-          (context) => [
-            PopupMenuItem(
-              value: 'profile',
-              child: Row(
-                children: [
-                  Icon(Icons.person_outline, color: theme.colorScheme.primary),
-                  const SizedBox(width: 12),
-                  const Text('Mi Perfil'),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            PopupMenuItem(
-              value: 'logout',
-              child: Row(
-                children: const [
-                  Icon(Icons.logout, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'profile',
+          child: Row(
+            children: [
+              Icon(Icons.person_outline, color: theme.colorScheme.primary),
+              const SizedBox(width: 12),
+              const Text('Mi Perfil'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'logout',
+          child: const Row(
+            children: [
+              Icon(Icons.logout, color: Colors.red),
+              SizedBox(width: 12),
+              Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
