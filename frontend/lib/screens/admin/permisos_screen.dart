@@ -115,6 +115,10 @@ class _PermisosScreenState extends State<PermisosScreen> {
   }
 
   void _seleccionarUsuario(Usuario usuario) {
+    print('DEBUG: Seleccionando usuario: ${usuario.nombreCompleto}');
+    print('DEBUG: Rol del usuario: "${usuario.rol}"');
+    print('DEBUG: Nombre de usuario: "${usuario.nombreUsuario}"');
+    
     setState(() {
       _usuarioSeleccionado = usuario;
     });
@@ -124,25 +128,26 @@ class _PermisosScreenState extends State<PermisosScreen> {
       _permisosActivos[usuario.nombreUsuario] = {};
       
       // Inicializar todos los permisos del rol como ACTIVOS por defecto
-      final role = _parseRole(usuario.rol);
+      final role = _parseRoleWithContext(usuario.rol, usuario.nombreUsuario, usuario.nombreCompleto);
+      print('DEBUG: Rol parseado: $role');
       final permisosRol = _permisosPorRol[role] ?? [];
+      print('DEBUG: Permisos del rol: $permisosRol');
       
       for (final permiso in permisosRol) {
         _permisosActivos[usuario.nombreUsuario]![permiso] = true; // ACTIVO por defecto
+        print('DEBUG: Activando permiso: $permiso');
       }
     }
   }
 
-  UserRole _parseRole(String roleName) {
-    print('DEBUG PERMISOS: Parseando rol: "$roleName"'); // Debug temporal
+  UserRole _parseRoleWithContext(String roleName, String nombreUsuario, String nombreCompleto) {
+    print('DEBUG PERMISOS: Parseando rol: "$roleName" para usuario: "$nombreUsuario" ($nombreCompleto)');
     final roleNameLower = roleName.toLowerCase().trim();
+    
     switch (roleNameLower) {
       case 'administradorsistema':
       case 'administrador sistema':
       case 'admin sistema':
-      case 'administrador':
-      case 'admin':
-      case 'administrator':
         print('DEBUG PERMISOS: Mapeado a AdministradorSistema');
         return UserRole.administradorSistema;
       case 'administradordocumentos':
@@ -151,6 +156,18 @@ class _PermisosScreenState extends State<PermisosScreen> {
       case 'administrador de documentos':
         print('DEBUG PERMISOS: Mapeado a AdministradorDocumentos');
         return UserRole.administradorDocumentos;
+      case 'administrador':
+      case 'admin':
+      case 'administrator':
+        // Para el rol genérico "Administrador", usar contexto del usuario
+        if (nombreUsuario.toLowerCase() == 'admin' || 
+            nombreCompleto.toLowerCase().contains('sistema')) {
+          print('DEBUG PERMISOS: Rol "Administrador" mapeado a AdministradorSistema por contexto');
+          return UserRole.administradorSistema;
+        } else {
+          print('DEBUG PERMISOS: Rol "Administrador" mapeado a AdministradorDocumentos por contexto');
+          return UserRole.administradorDocumentos;
+        }
       case 'contador':
         print('DEBUG PERMISOS: Mapeado a Contador');
         return UserRole.contador;
