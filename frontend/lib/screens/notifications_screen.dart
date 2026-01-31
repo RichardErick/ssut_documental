@@ -36,9 +36,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final usuarioService = Provider.of<UsuarioService>(context, listen: false);
     
     try {
-      // 1. Load Alerts
-      final alertsResponse = await apiService.get('/alertas');
-      final alertsList = alertsResponse.data as List;
+      // 1. Load Alerts (si el endpoint falla o no existe, usar lista vacía)
+      List<dynamic> alertsList = [];
+      try {
+        final alertsResponse = await apiService.get('/alertas');
+        if (alertsResponse.statusCode == 200 && alertsResponse.data != null) {
+          final data = alertsResponse.data;
+          alertsList = data is List ? data : [];
+        }
+      } catch (_) {
+        alertsList = [];
+      }
       
       // 2. If Admin, load pending users
       List<Usuario> pending = [];

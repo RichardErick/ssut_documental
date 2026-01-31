@@ -79,7 +79,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    // Verificación de permiso para módulos de administración
+    // Notificaciones y Mi perfil visibles en el menú
+    _navItems.add(
+      NavigationItem(
+        label: 'Notificaciones',
+        icon: Icons.notifications_outlined,
+        selectedIcon: Icons.notifications_rounded,
+        screen: const NotificationsScreen(),
+      ),
+    );
+    _navItems.add(
+      NavigationItem(
+        label: 'Mi perfil',
+        icon: Icons.person_outline_rounded,
+        selectedIcon: Icons.person_rounded,
+        screen: const ProfileScreen(),
+      ),
+    );
+
+    // Gestión de Permisos: visible para Administrador Sistema y Administrador Documentos
+    final canSeePermisos = authProvider.isSystemAdmin || role == UserRole.administradorDocumentos;
+    if (canSeePermisos) {
+      _navItems.add(
+        NavigationItem(
+          label: 'Gestión de Permisos',
+          icon: Icons.security_outlined,
+          selectedIcon: Icons.security,
+          screen: const PermisosScreen(),
+        ),
+      );
+    }
+
+    // Roles y Permisos y Sincronización: solo Administrador de Sistema
     if (authProvider.canManageUserPermissions) {
       _navItems.add(
         NavigationItem(
@@ -91,17 +122,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
       _navItems.add(
         NavigationItem(
-          label: 'Gestión de Permisos',
-          icon: Icons.security_outlined,
-          selectedIcon: Icons.security,
-          screen: const PermisosScreen(),
-        ),
-      );
-      _navItems.add(
-        NavigationItem(
           label: 'Sincronización',
-          icon:
-              Icons.sync_problem_outlined,
+          icon: Icons.sync_problem_outlined,
           selectedIcon: Icons.sync,
           screen: const UsersSyncScreen(),
         ),
@@ -148,10 +170,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
       final response = await apiService.get('/alertas/unread-count');
-      if (mounted) {
-        setState(() {
-          _unreadNotifications = response.data['count'] ?? 0;
-        });
+      if (response.statusCode == 200 && response.data is Map) {
+        final count = response.data['count'];
+        if (mounted) {
+          setState(() {
+            _unreadNotifications = count is int ? count : 0;
+          });
+        }
       }
     } catch (_) {}
     
