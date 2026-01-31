@@ -144,6 +144,47 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        if (authProvider.isAuthenticated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.of(context).pushReplacementNamed('/home');
+            }
+          });
+          return Scaffold(
+            body: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade900, Colors.blue.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Cargando...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return _buildLoginContent(context);
+      },
+    );
+  }
+
+  Widget _buildLoginContent(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
 
@@ -293,12 +334,12 @@ class _LoginScreenState extends State<LoginScreen>
                                       icon: Icons.lock_outline_rounded,
                                       isPassword: true,
                                       isDark: true,
-                                        validator: (v) {
-                                          if (v == null || v.isEmpty) {
-                                            return 'Ingrese su contraseña';
-                                          }
-                                          return null;
-                                        },
+                                      validator: (v) {
+                                        if (v == null || v.isEmpty) {
+                                          return 'Ingrese su contraseña';
+                                        }
+                                        return null;
+                                      },
                                     ),
                                     const SizedBox(height: 16),
                                     Row(

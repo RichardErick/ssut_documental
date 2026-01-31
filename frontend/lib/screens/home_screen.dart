@@ -255,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 isDesktop
                     ? _buildBreadcrumbs(theme)
                     : Text(
-                      _navItems[_selectedIndex].label,
+                      _navItems.isEmpty ? 'Cargando...' : _navItems[_selectedIndex].label,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -317,12 +317,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildBreadcrumbs(ThemeData theme) {
+    final label = _navItems.isEmpty ? 'Cargando' : _navItems[_selectedIndex].label;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'SSUT / ${_navItems[_selectedIndex].label.toUpperCase()}',
+          'SSUT / ${label.toUpperCase()}',
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w500,
@@ -331,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         Text(
-          _navItems[_selectedIndex].label,
+          label,
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -486,6 +487,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildBody(ThemeData theme) {
+    final index = _selectedIndex.clamp(0, _navItems.isEmpty ? 0 : _navItems.length - 1);
+    final child = _navItems.isEmpty
+        ? KeyedSubtree(
+            key: const ValueKey('loading'),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Cargando...',
+                    style: GoogleFonts.poppins(color: theme.colorScheme.onSurface),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : KeyedSubtree(key: ValueKey('nav_$index'), child: _navItems[index].screen);
+
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -495,7 +516,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         duration: const Duration(milliseconds: 500),
         switchInCurve: Curves.easeInOutCubic,
         switchOutCurve: Curves.easeInOutCubic,
-        transitionBuilder: (child, animation) {
+        transitionBuilder: (childWidget, animation) {
           final slideAnimation = Tween<Offset>(
             begin: const Offset(0.01, 0),
             end: Offset.zero,
@@ -505,11 +526,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             opacity: animation,
             child: SlideTransition(
               position: slideAnimation,
-              child: child,
+              child: childWidget,
             ),
           );
         },
-        child: _navItems[_selectedIndex].screen,
+        child: child,
       ),
     );
   }
