@@ -18,8 +18,8 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     debugPrint('[SPLASH] initState()');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      debugPrint('[SPLASH] postFrameCallback - esperando 400ms...');
-      await Future.delayed(const Duration(milliseconds: 400));
+      debugPrint('[SPLASH] postFrameCallback - redirigiendo en 80ms');
+      await Future.delayed(const Duration(milliseconds: 80));
       _redirect();
     });
   }

@@ -1104,12 +1104,14 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
   }
 
   Future<void> _descargarQRSimple(Documento doc) async {
+    debugPrint('[QR] _descargarQRSimple() llamado');
     try {
       String? qrData = _normalizeQrData(
         _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
       );
 
       if (qrData == null) {
+        debugPrint('[QR] qrData es null, generando QR...');
         await _generateQr();
         qrData = _normalizeQrData(
           _qrData ?? widget.documento.urlQR ?? widget.documento.codigoQR,
@@ -1121,6 +1123,7 @@ class _DocumentoDetailScreenState extends State<DocumentoDetailScreen> {
               ? qrData
               : widget.documento.codigo;
 
+      debugPrint('[QR] Mostrando diálogo de descarga (PNG/PDF)');
       // Mostrar opciones de descarga
       showDialog(
         context: context,

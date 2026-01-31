@@ -226,21 +226,19 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
       _subcarpetas = [];
     });
     
-    print('DEBUG: Estado actualizado - _carpetaSeleccionada: ${_carpetaSeleccionada?.nombre}');
-    print('DEBUG: carpetaPadreId de la carpeta seleccionada: ${_carpetaSeleccionada?.carpetaPadreId}');
+    final esCarpeta = carpeta.carpetaPadreId == null;
+    // Regla: dentro de una carpeta solo hay subcarpetas; dentro de subcarpetas solo documentos.
+    if (esCarpeta) {
+      await _cargarSubcarpetas(carpeta.id);
+    } else {
+      await Future.wait([
+        _cargarDocumentosCarpeta(carpeta.id),
+        _cargarSubcarpetas(carpeta.id),
+      ]);
+    }
     
-    // Cargar documentos y subcarpetas en paralelo
-    await Future.wait([
-      _cargarDocumentosCarpeta(carpeta.id),
-      _cargarSubcarpetas(carpeta.id),
-    ]);
-    
-    // Forzar rebuild del FloatingActionButton
     if (mounted) {
-      print('DEBUG: Forzando rebuild después de abrir carpeta');
-      setState(() {
-        // Forzar rebuild
-      });
+      setState(() {});
     }
   }
 
@@ -645,6 +643,7 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
 
   Widget _construirVistaDocumentosCarpeta(ThemeData theme) {
     final carpeta = _carpetaSeleccionada!;
+    final esCarpeta = carpeta.carpetaPadreId == null;
     final docs = _documentosCarpeta;
     final rango = _estaCargandoDocumentosCarpeta
         ? 'Cargando...'
@@ -653,36 +652,78 @@ class DocumentosListScreenState extends State<DocumentosListScreen>
     return Flexible(
       child: Column(
         children: [
-          // Header mejorado de la carpeta
           _buildCarpetaHeader(carpeta, rango, theme),
-          
-          // Vista de Subcarpetas mejorada
-          if (_estaCargandoSubcarpetas)
-            Container(
-              height: 4,
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              child: LinearProgressIndicator(
-                backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+          // Carpeta: solo subcarpetas. Subcarpeta: solo documentos.
+          if (esCarpeta) ...[
+            if (_estaCargandoSubcarpetas)
+              Container(
+                height: 4,
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                child: LinearProgressIndicator(
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                ),
+              )
+            else if (_subcarpetas.isNotEmpty)
+              _buildSubcarpetasSection(theme)
+            else
+              Expanded(child: _buildSoloSubcarpetasMessage(theme)),
+          ] else ...[
+            if (_estaCargandoSubcarpetas)
+              Container(
+                height: 4,
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                child: LinearProgressIndicator(
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                ),
+              )
+            else if (_subcarpetas.isNotEmpty)
+              _buildSubcarpetasSection(theme),
+            _buildViewControls(theme),
+            Expanded(
+              child: _estaCargandoDocumentosCarpeta
+                  ? _buildDocumentosLoading()
+                  : docs.isEmpty
+                      ? _buildDocumentosEmpty()
+                      : _vistaGrid
+                          ? _construirGridDocumentosCarpeta(docs, theme)
+                          : _construirListaDocumentos(docs, theme),
             ),
-          )
-        else if (_subcarpetas.isNotEmpty)
-          _buildSubcarpetasSection(theme),
+          ],
+        ],
+      ),
+    );
+  }
 
-        // Controles de vista
-        _buildViewControls(theme),
-
-        // Lista/Grid de documentos
-        Expanded(
-          child: _estaCargandoDocumentosCarpeta
-              ? _buildDocumentosLoading()
-              : docs.isEmpty
-                  ? _buildDocumentosEmpty()
-                  : _vistaGrid
-                      ? _construirGridDocumentosCarpeta(docs, theme)
-                      : _construirListaDocumentos(docs, theme),
+  /// Mensaje cuando estamos en una carpeta (sin subcarpetas aún): aquí solo se agregan subcarpetas.
+  Widget _buildSoloSubcarpetasMessage(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_open_rounded, size: 64, color: Colors.blue.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'En esta carpeta solo se agregan subcarpetas',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Use el botón "Nueva Subcarpeta" para crear una. Dentro de cada subcarpeta podrá agregar documentos.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
-      ],
       ),
     );
   }
