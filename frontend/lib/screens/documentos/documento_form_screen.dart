@@ -382,78 +382,6 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
       }
     }
   }
-          carpetaId: _carpetaId,
-          nivelConfidencialidad: _nivelConfidencialidad,
-        );
-        await documentoService.update(widget.documento!.id, dto);
-
-        if (_pickedFile != null) {
-          final anexoService = Provider.of<AnexoService>(
-            context,
-            listen: false,
-          );
-          await anexoService.subirArchivo(widget.documento!.id, _pickedFile!);
-        }
-
-        if (mounted) {
-          // Notificar al DataProvider
-          final dataProvider = Provider.of<DataProvider>(context, listen: false);
-          dataProvider.notifyDocumentoUpdated(widget.documento!);
-          
-          _showSnack(
-            'Documento actualizado con exito',
-            background: Colors.green,
-          );
-          Navigator.pop(context, true);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        String errorMessage = e.toString();
-        
-        // Detectar errores específicos y mostrar mensajes amigables
-        if (errorMessage.contains('duplicate') || 
-            errorMessage.contains('duplicado') || 
-            errorMessage.contains('already exists') ||
-            errorMessage.contains('ya existe') ||
-            errorMessage.contains('unique constraint')) {
-          _mostrarDialogoError(
-            'Documento Duplicado',
-            'Ya existe un documento con este número correlativo en la gestión seleccionada.\n\nPor favor, verifique el número correlativo.',
-            Icons.description_outlined,
-            Colors.orange,
-          );
-        } else if (errorMessage.contains('validation') || 
-                   errorMessage.contains('invalid') ||
-                   errorMessage.contains('Formato de código inválido')) {
-          _mostrarDialogoError(
-            'Datos Inválidos',
-            'Los datos ingresados no son válidos. Verifique:\n\n• Número correlativo debe ser numérico\n• Todos los campos requeridos estén completos\n• Las fechas sean válidas',
-            Icons.warning_amber_rounded,
-            Colors.red,
-          );
-        } else if (errorMessage.contains('network') || errorMessage.contains('connection')) {
-          _mostrarDialogoError(
-            'Error de Conexión',
-            'No se pudo conectar con el servidor. Verifique su conexión a internet e intente nuevamente.',
-            Icons.wifi_off_rounded,
-            Colors.grey,
-          );
-        } else {
-          // Error genérico
-          _mostrarDialogoError(
-            'Error al Guardar Documento',
-            'Ocurrió un error inesperado:\n${errorMessage.replaceAll("Exception:", "").trim()}',
-            Icons.error_outline_rounded,
-            Colors.red,
-          );
-        }
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   void _mostrarDialogoError(String titulo, String mensaje, IconData icono, Color color) {
     showDialog(
       context: context,
@@ -942,9 +870,6 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-      ),
-    );
-  }
       ),
     );
   }
