@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,7 +8,6 @@ import 'package:provider/provider.dart';
 import '../../models/carpeta.dart';
 import '../../models/documento.dart';
 import '../../models/usuario.dart';
-import '../../providers/data_provider.dart';
 import '../../services/anexo_service.dart';
 import '../../services/carpeta_service.dart';
 import '../../services/catalogo_service.dart';
@@ -44,6 +44,8 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
   int? _carpetaId;
   int _nivelConfidencialidad = 1;
   PlatformFile? _pickedFile;
+  /// Error del servidor para el campo N° Correlativo (código). Se muestra en rojo debajo del campo.
+  String? _numeroCorrelativoError;
 
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
@@ -164,61 +166,17 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    try {
-      final DateTime? picked = await showDatePicker(
-        context: context,
-        initialDate: _fechaDocumento,
-        firstDate: DateTime(2000),
-        lastDate: DateTime(2101),
-        locale: const Locale('es', 'ES'), // Cambiar de 'BO' a 'ES'
-        helpText: 'Seleccionar fecha del documento',
-        cancelText: 'Cancelar',
-        confirmText: 'Aceptar',
-        fieldLabelText: 'Fecha',
-        fieldHintText: 'dd/mm/aaaa',
-        errorFormatText: 'Formato de fecha inválido',
-        errorInvalidText: 'Fecha inválida',
-        builder: (context, child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: Colors.blue.shade700,
-                onPrimary: Colors.white,
-                surface: Colors.white,
-                onSurface: Colors.black87,
-              ),
-            ),
-            child: child!,
-          );
-        },
-      );
-      
-      if (picked != null && picked != _fechaDocumento) {
-        setState(() {
-          _fechaDocumento = picked;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Error al abrir selector de fecha: ${e.toString()}'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _fechaDocumento,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      locale: const Locale('es', 'BO'),
+    );
+    if (picked != null && picked != _fechaDocumento) {
+      setState(() {
+        _fechaDocumento = picked;
+      });
     }
   }
 
@@ -231,7 +189,9 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
       return;
     }
     if (_areaOrigenId == null) {
-      _showSnack('Seleccione un área de origen', background: Colors.orange);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seleccione un área de origen')),
+      );
       return;
     }
 
@@ -254,54 +214,19 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
           return;
         }
 
-        // Validar que el número correlativo no esté vacío
-        if (_numeroCorrelativoController.text.trim().isEmpty) {
-          _showSnack(
-            'El número correlativo es obligatorio',
-            background: Colors.orange,
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
-
-        // Validar que la gestión no esté vacía
-        if (_gestionController.text.trim().isEmpty) {
-          _showSnack(
-            'La gestión es obligatoria',
-            background: Colors.orange,
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
-
-        print('DEBUG: Creando documento con datos:');
-        print('- numeroCorrelativo: ${_numeroCorrelativoController.text}');
-        print('- tipoDocumentoId: $_tipoDocumentoId');
-        print('- areaOrigenId: $_areaOrigenId');
-        print('- gestion: ${_gestionController.text}');
-        print('- fechaDocumento: $_fechaDocumento');
-        print('- responsableId: $_responsableId');
-        print('- carpetaId: $_carpetaId');
-        print('- nivelConfidencialidad: $_nivelConfidencialidad');
-
         // Crear
         final dto = CreateDocumentoDTO(
-          numeroCorrelativo: _numeroCorrelativoController.text.trim(),
+          numeroCorrelativo: _numeroCorrelativoController.text,
           tipoDocumentoId: _tipoDocumentoId!,
           areaOrigenId: _areaOrigenId!,
-          gestion: _gestionController.text.trim(),
+          gestion: _gestionController.text,
           fechaDocumento: _fechaDocumento,
-          descripcion: _descripcionController.text.trim().isEmpty 
-              ? null 
-              : _descripcionController.text.trim(),
+          descripcion: _descripcionController.text,
           responsableId: _responsableId,
-          ubicacionFisica: _ubicacionFisicaController.text.trim().isEmpty 
-              ? null 
-              : _ubicacionFisicaController.text.trim(),
+          ubicacionFisica: _ubicacionFisicaController.text,
           carpetaId: _carpetaId,
           nivelConfidencialidad: _nivelConfidencialidad,
         );
-        
         final newDoc = await documentoService.create(dto);
 
         if (_pickedFile != null) {
@@ -313,118 +238,70 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
         }
 
         if (mounted) {
-          // Notificar al DataProvider
-          final dataProvider = Provider.of<DataProvider>(context, listen: false);
-          dataProvider.refresh();
-          
-          _showSnack('Documento creado con éxito', background: Colors.green);
+          _showSnack('Documento creado con exito', background: Colors.green);
           Navigator.pop(context, true);
         }
       } else {
         // Actualizar
         final dto = UpdateDocumentoDTO(
-          numeroCorrelativo: _numeroCorrelativoController.text.trim().isEmpty 
-              ? null 
-              : _numeroCorrelativoController.text.trim(),
+          numeroCorrelativo: _numeroCorrelativoController.text,
           tipoDocumentoId: _tipoDocumentoId,
           areaOrigenId: _areaOrigenId,
-          gestion: _gestionController.text.trim().isEmpty 
-              ? null 
-              : _gestionController.text.trim(),
+          gestion: _gestionController.text,
           fechaDocumento: _fechaDocumento,
-          descripcion: _descripcionController.text.trim().isEmpty 
-              ? null 
-              : _descripcionController.text.trim(),
+          descripcion: _descripcionController.text,
           responsableId: _responsableId,
-          ubicacionFisica: _ubicacionFisicaController.text.trim().isEmpty 
-              ? null 
-              : _ubicacionFisicaController.text.trim(),
+          ubicacionFisica: _ubicacionFisicaController.text,
           carpetaId: _carpetaId,
           nivelConfidencialidad: _nivelConfidencialidad,
         );
-
         await documentoService.update(widget.documento!.id, dto);
 
+        if (_pickedFile != null) {
+          final anexoService = Provider.of<AnexoService>(
+            context,
+            listen: false,
+          );
+          await anexoService.subirArchivo(widget.documento!.id, _pickedFile!);
+        }
+
         if (mounted) {
-          // Notificar al DataProvider
-          final dataProvider = Provider.of<DataProvider>(context, listen: false);
-          dataProvider.refresh();
-          
-          _showSnack('Documento actualizado con éxito', background: Colors.green);
+          _showSnack(
+            'Documento actualizado con exito',
+            background: Colors.green,
+          );
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
-      print('DEBUG: Error guardando documento: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
-        
-        String errorMessage = 'Error al guardar documento';
-        
-        // Mejorar el mensaje de error basado en el tipo
-        if (e.toString().contains('400')) {
-          errorMessage = 'Datos inválidos. Verifique que todos los campos requeridos estén completos.';
-        } else if (e.toString().contains('500')) {
-          errorMessage = 'Error del servidor. Intente nuevamente.';
-        } else if (e.toString().contains('network') || e.toString().contains('connection')) {
-          errorMessage = 'Error de conexión. Verifique su conexión a internet.';
+        String? serverMessage;
+        if (e is DioException &&
+            e.response?.statusCode == 400 &&
+            e.response?.data != null) {
+          final data = e.response!.data;
+          serverMessage = (data is Map && data['message'] != null)
+              ? data['message'].toString()
+              : null;
+          if (serverMessage != null &&
+              (serverMessage.toLowerCase().contains('código') ||
+                  serverMessage.toLowerCase().contains('codigo') ||
+                  serverMessage.toLowerCase().contains('correlativo') ||
+                  serverMessage.contains('Formato de código'))) {
+            setState(() => _numeroCorrelativoError = serverMessage);
+            _showSnack(
+              'Revise el campo N° Correlativo',
+              background: Colors.orange,
+            );
+            return;
+          }
         }
-        
-        _showSnack(
-          '$errorMessage\n\nDetalle: ${e.toString()}',
-          background: Colors.red,
-          duration: 6,
-        );
+        setState(() => _numeroCorrelativoError = null);
+        _showSnack('Error al guardar: $e', background: Colors.red);
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-  void _mostrarDialogoError(String titulo, String mensaje, IconData icono, Color color) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(icono, color: color, size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                titulo,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          mensaje,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            height: 1.4,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Entendido',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _crearNuevaCarpeta() async {
@@ -570,10 +447,33 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
 
                       TextFormField(
                         controller: _numeroCorrelativoController,
-                        decoration: _inputDecoration('N° Correlativo'),
+                        decoration: _inputDecoration('N° Correlativo').copyWith(
+                          errorText: _numeroCorrelativoError,
+                          errorStyle: const TextStyle(color: Colors.red),
+                          helperText: _numeroCorrelativoError == null
+                              ? 'Solo números, 1 a 6 dígitos. Formato del código: TIPO-AREA-GESTIÓN-####'
+                              : null,
+                          helperMaxLines: 2,
+                        ),
                         keyboardType: TextInputType.number,
-                        validator:
-                            (v) => v == null || v.isEmpty ? 'Requerido' : null,
+                        onChanged: (_) {
+                          if (_numeroCorrelativoError != null) {
+                            setState(() => _numeroCorrelativoError = null);
+                          }
+                        },
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Requerido';
+                          }
+                          final digits = v.replaceAll(RegExp(r'\D'), '');
+                          if (digits.isEmpty) {
+                            return 'Solo números (dígitos). Ej: 1, 001, 1234';
+                          }
+                          if (digits.length > 6) {
+                            return 'Máximo 6 dígitos. El código es TIPO-AREA-GESTIÓN-####';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -844,13 +744,12 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
     );
   }
 
-  void _showSnack(String message, {Color background = Colors.blue, int duration = 3}) {
+  void _showSnack(String message, {Color background = Colors.blue}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: background,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: duration),
         content: Row(
           children: [
             Icon(
@@ -864,11 +763,8 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
               color: Colors.white,
             ),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, maxLines: 4, overflow: TextOverflow.ellipsis)),
+            Expanded(child: Text(message)),
           ],
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );
@@ -876,6 +772,7 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
 
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
+      
       labelText: label,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

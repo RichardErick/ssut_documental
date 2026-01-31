@@ -1,24 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../models/usuario.dart';
 import '../../models/permiso.dart';
+import '../../models/permiso_usuario_entry.dart';
 import '../../services/permiso_service.dart';
 import '../../services/usuario_service.dart';
 import '../../utils/error_helper.dart';
-
-/// Entry para representar el estado de un permiso de usuario
-class PermisoUsuarioEntry {
-  final Permiso permiso;
-  final bool roleHas;
-  final bool userHas;
-  final bool isDenied;
-
-  PermisoUsuarioEntry({
-    required this.permiso,
-    required this.roleHas,
-    required this.userHas,
-    required this.isDenied,
-  });
-}
 
 /// Controlador para la gestión de permisos de usuarios
 class PermisosController extends ChangeNotifier {
@@ -135,7 +121,7 @@ class PermisosController extends ChangeNotifier {
   // ========== MÉTODOS PRIVADOS ==========
   Future<void> _cargarPermisosUsuario(Usuario usuario) async {
     try {
-      final permisos = await _permisoService.getPermisosUsuario(usuario.id);
+      final permisos = await _permisoService.getPermisosUsuarioAdmin(usuario.id);
       _permisosUsuario = permisos;
       
       // Guardar estado original

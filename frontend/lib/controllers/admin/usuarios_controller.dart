@@ -59,7 +59,7 @@ class UsuariosController extends ChangeNotifier {
 
   /// Eliminar usuario
   Future<void> eliminarUsuario(int id) async {
-    await _service.delete(id);
+    await _service.deleteUsuario(id);
     await cargarUsuarios();
   }
 
